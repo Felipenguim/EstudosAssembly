@@ -1,0 +1,5 @@
+ 1904  rm *.o test
+ 1905  as -o teste.o teste.s
+ 1906  as -o utils.o utils.s
+ 1907  ld -o test teste.o utils.o
+ 1908  ./test
