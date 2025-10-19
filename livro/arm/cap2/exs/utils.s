@@ -283,17 +283,73 @@ read_word:
 // x0 points to a string
 // returns x0: number, x1: length
 parse_uint:
-    mov x0, #0
-    mov x1, #0
-    ret
+    mov x15, x0 //guardando o endereço da string
+    mov x3, #0 //contador len
+    mov x2, #0 //contador real
+    mov x0, #0 //conterá o numero final
+    mov x12, #10 //multiplicador 
+    .parse_loop:
+        ldrb w4, [x15, x2] //load byte em w4 o endereço de x15 + valor do contador em x3
+        add x2, x2, #1
+        cmp w4, #0
+        b.eq .end
+        cmp w4, #48 
+        b.lt .end
+        cmp w4, #57
+        b.gt .end  //pula se n for digito numerico, se quiser fazer uma versão que limpe é mais tenso
+        
+        add x3, x3, #1
+        sub w4, w4, #48
+        mul x0, x0, x12
+        add x0, x0, x4
+        b .parse_loop
+    .end:
+        mov x1, x3
+        ret
 
 
 // x0 points to a string
 // returns x0: number, x1: length
 parse_int:
-    mov x0, #0
-    mov x1, #0
-    ret
+    mov x15, x0 //guardando o endereço da string
+    mov x3, #0 //contador len
+    mov x2, #0 //contador real
+    mov x0, #0 //conterá o numero final
+    mov x12, #10 //multiplicador
+    ldrb w4, [x15, x2]
+    cmp w4, '-'
+    b.eq .negative
+    mov x10, #0 //flag de negativo
+    .parse_loop_int:
+        ldrb w4, [x15, x2] //load byte em w4 o endereço de x15 + valor do contador em x3
+        add x2, x2, #1
+        cmp w4, #0
+        b.eq .end_int
+        cmp w4, #48 
+        b.lt .end_int
+        cmp w4, #57
+        b.gt .end_int  //pula se n for digito numerico, se quiser fazer uma versão que limpe é mais tenso
+        
+        add x3, x3, #1
+        sub w4, w4, #48
+        mul x0, x0, x12
+        add x0, x0, x4
+        b .parse_loop_int
+    
+    .negative:
+    add x2, x2, #1
+    mov x10, #1 //flag de negativo
+    b .parse_loop_int
+    
+    .end_int:
+        cmp x10, #0
+        b.eq .fim
+        neg x0, x0
+        .fim:
+            //x0 vem certinho
+            mov x1, x3
+            ret
+
 
 string_equals:
     mov x0, #0
