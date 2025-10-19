@@ -196,11 +196,88 @@ read_char:
         ret
 
 //entrada:
-//   1 - endereço de buffer (x1) // o espaço a ser reservado será feito antes da função
-//   2 - tamanho (x2)
-//ACHO Q VAI SER UM LOOP DE READ_CHAR
+//   1 - endereço de buffer (x0) // o espaço a ser reservado será feito antes da função
+//   2 - tamanho (x1)
+//Saida:
+//  0 em x0 se der errado
+// endereço em x0 se der certo
 read_word:
-    ret
+    stp x29, x30, [sp, -16]!
+    mov x29, sp
+    mov x15, x0 //passa o endereço para x15
+    mov x12, x1 //passa o len para x12
+
+    //leitura byte a byte:
+    mov x3, #0 //vai guardando o tamnho 
+    .first_char:
+        sub sp, sp, #16
+        mov x1, sp 
+        mov x8, #63
+        mov x0, #0 //stdin
+        mov x2, #1 //1 byte a ler
+        svc #0
+        ldrb w4, [sp]
+        add sp, sp, #16
+        cmp w4, #0
+        b.eq .eof
+
+        cmp w4, #0x10
+        b.eq .first_char
+        cmp w4, #0x9
+        b.eq .first_char
+        cmp w4, #0x20
+        b.eq .first_char
+        
+        
+        b .store_first
+    .store_first:
+        sub x11, x12, #1     // tamanho útil (reserva 1 p/ terminador)
+        cmp x11, x3
+        b.le .failed
+        strb w4, [x15, x3] //store byte em x15 + x3
+        add x3, x3, #1
+    .read_loop:
+        sub sp, sp, #16
+        mov x1, sp 
+        mov x8, #63
+        mov x0, #0 //stdin
+        mov x2, #1 //1 byte a ler
+        svc #0
+        ldrb w4, [sp]
+        add sp, sp, #16
+        cmp w4, #0
+        b.eq .finish
+
+        cmp w4, #0x10
+        b.eq .finish
+        cmp w4, #0x9
+        b.eq .finish
+        cmp w4, #0x20
+        b.eq .finish
+
+        cmp x3, x11
+        b.ge .failed
+        strb w4, [x15, x3]
+        add x3, x3, #1
+        b .read_loop
+
+    .finish:
+        mov w4, #0
+        strb w4, [x15, x3]
+        mov x0, x15
+        ldp x29, x30, [sp], 16
+        ret
+
+    .failed:
+        mov x0, '0'  
+        ldp x29, x30, [sp], 16
+        ret  
+
+    .eof:
+        mov x0, '0' 
+        ldp x29, x30, [sp], 16
+        ret  
+
 
 
 // x0 points to a string

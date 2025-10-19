@@ -16,17 +16,18 @@ str_rand:
 
 .text
 _start:
-    ldr x0, =demo1
-    ldr x0, [x0]
-    //mov x0, #12345      // número para imprimir
-    bl print_uint           // chama sua função para exibir o número
-    
-    bl print_newline        // pula linha
-    ldr x0, =demo1
-    ldr x0, [x0]
-    bl print_int
-    bl print_newline
-    bl read_char
+    sub sp, sp, #64
+    mov x0, sp
+    mov x1, #64
+    bl read_word //endereço saindo em x0
+    add sp, sp, #64
+    cmp x0, '0'
+    b.eq .fail
+    bl print_string
     bl print_newline
     bl success_exit
+    .fail:
+        bl print_char
+        bl print_newline
+        bl success_exit
     
