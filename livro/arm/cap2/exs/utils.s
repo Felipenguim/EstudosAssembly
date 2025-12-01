@@ -55,7 +55,7 @@ string_length:
 print_string: //recebe o ponteiro da string em x0, string deve ser terminada em zero
     //x0 deve ter o endereço da string
 
-     stp     x29, x30, [sp, -16]!
+    stp     x29, x30, [sp, -16]!
     mov     x29, sp
     mov x15, x0
     bl string_length
@@ -350,10 +350,56 @@ parse_int:
             mov x1, x3
             ret
 
-
+// x0 points to a string
+// x1 points to another string
+// returns 0: s0!=s1 returns 1: s0 == s1
 string_equals:
-    mov x0, #0
-    ret
+    stp  x29, x30, [sp, -16]!
+    mov  x29, sp
 
+    mov x15, x0 //string 0
+    mov x12, x1 //string 1
+
+    .loop_str_eq:
+        ldrb w2, [x15], #1 //carrega o byte com post-incremento
+        ldrb w3, [x12], #1
+        cmp x2, x3
+        b.ne .strings_not_equal  //se não forem iguais
+        cmp x2, #0
+        b.ne .loop_str_eq // não acabou, continua o loop
+        mov x0, #1 
+        ldp x29, x30, [sp], 16
+        ret
+    .strings_not_equal:
+        mov x0, #0  
+        ldp x29, x30, [sp], 16
+        ret
+
+//recebe em x0 o ponteiro para a string
+//recebe em x1 o ponteiro para onde copiar, ponteiro para o buffer
+//recebe em x2 o tamanho do buffer
+//retorna em x0 o endereço do buffer ou 0 se der erro
 string_copy:
-    ret
+    stp x29, x30, [sp, -16]!
+    mov x29, sp
+
+    mov x15, x0
+    mov x12, x1 //endereço original do buffer
+    mov x14, x1
+    mov x9, x2 //para não quebrar o x2 no string_length
+    bl string_length //devolve tamanho em x0
+    cmp x0, x9
+    b.gt .buffer_too_small //se o tamanho da string for maior que o buffer, erro
+    .loop_copy:
+        ldrb w3, [x15], #1
+        strb w3, [x12], #1 //não da pra usar x1, ele é alterado no string_length
+        cmp w3, #0
+        b.ne .loop_copy
+        mov x0, x14 //devolve o endereço original do buffer
+        ldp x29, x30, [sp], 16
+        ret
+
+    .buffer_too_small:
+        mov x0, #0
+        ldp x29, x30, [sp], 16
+        ret
