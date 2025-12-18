@@ -26,6 +26,7 @@ signal:
 .global success_exit
 .global print_newline_tail
 .global print_buffer
+.global string_to_int
 
 exit:
 // deve receber o x0 com algum código de saída
@@ -445,3 +446,29 @@ string_copy:
         mov x0, #0
         ldp x29, x30, [sp], 16
         ret
+
+
+//recebera o ponteiro em x0 com a string 
+// retorna x0 = número
+string_to_int:
+    mov x1, x0
+    mov x0, #0 //x0 -> 0 vai ser onde o resultado ficara
+    mov x2, #10 //-> divisor
+
+    .loop_string_to_int:
+        ldrb w3, [x1], #1 //loada um byte e move para a diretira]
+        cbz w3, .over  // compare branch zero, fim da string
+        //sub w3, w3, '0'  
+        //cmp w3, #9
+        //b.hi .over          // se não for 0–9, para 
+        cmp w3, '0'
+        b.lt .over
+        cmp w3, '9'
+        b.gt .over
+        sub w3, w3, '0'   //mesmo funcionamento
+        mul x0, x0, x2
+        add x0, x0, x3
+        b .loop_string_to_int
+
+        .over:
+            ret

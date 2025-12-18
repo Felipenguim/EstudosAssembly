@@ -4,7 +4,7 @@
 
 
 .set O_RDONLY, 0
-.set PROT_READ, 0X1
+.set PROT_READ, 0x1
 .set MAP_PRIVATE, 0x2
 .set AT_FDCWD, -100
 
