@@ -456,7 +456,7 @@ string_to_int:
     mov x2, #10 //-> divisor
 
     .loop_string_to_int:
-        ldrb w3, [x1], #1 //loada um byte e move para a diretira]
+        ldrb w3, [x1], #1 //loada um byte e move para a direita
         cbz w3, .over  // compare branch zero, fim da string
         //sub w3, w3, '0'  
         //cmp w3, #9
