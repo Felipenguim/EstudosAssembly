@@ -27,6 +27,7 @@ signal:
 .global print_newline_tail
 .global print_buffer
 .global string_to_int
+.global print_string_err
 
 exit:
 // deve receber o x0 com algum código de saída
@@ -64,12 +65,29 @@ print_string: //recebe o ponteiro da string em x0, string deve ser terminada em 
     bl string_length
     mov x2, x0 //passa o len para x2
     mov x1, x15 //x15 é o ponteiro, passa o endereço para x1
-    mov x0, 1
+    mov x0, #1
     mov x8, #64
     svc #0
     mov x0, #0
     ldp     x29, x30, [sp], 16
     ret
+
+print_string_err: //recebe o ponteiro da string em x0, string deve ser terminada em zero
+    //x0 deve ter o endereço da string
+
+    stp     x29, x30, [sp, -16]!
+    mov     x29, sp
+    mov x15, x0
+    bl string_length
+    mov x2, x0 //passa o len para x2
+    mov x1, x15 //x15 é o ponteiro, passa o endereço para x1
+    mov x0, #2
+    mov x8, #64
+    svc #0
+    mov x0, #0
+    ldp     x29, x30, [sp], 16
+    ret
+
 
 print_buffer:
     //recebe ponteiro em x0 e tamanho do arquivo em x1
@@ -262,14 +280,19 @@ read_word:
         ldrb w4, [sp]
         add sp, sp, #16
         cmp w4, #0
-        b.eq .eof
+        b.eq .eof 
 
         cmp w4, #0x10
+        b.eq .finish
+        cmp w4, #0x0A    // '\n'
         b.eq .first_char
-        cmp w4, #0x9
+        cmp w4, #0x0D    // '\r'
         b.eq .first_char
-        cmp w4, #0x20
+        cmp w4, #0x09    // '\t'
         b.eq .first_char
+        cmp w4, #0x20    // ' '
+        b.eq .first_char
+
         
         
         b .store_first
@@ -286,6 +309,9 @@ read_word:
         mov x0, #0 //stdin
         mov x2, #1 //1 byte a ler
         svc #0
+
+        cbz x0, .finish 
+
         ldrb w4, [sp]
         add sp, sp, #16
         cmp w4, #0
@@ -295,8 +321,12 @@ read_word:
         b.eq .finish
         cmp w4, #0x9
         b.eq .finish
-        cmp w4, #0x20
+        cmp w4, #0x0A        // '\n'
         b.eq .finish
+        cmp w4, #0x0D        // '\r'
+        b.eq .finish
+        //cmp w4, #0x20
+        //b.eq .finish
 
         cmp x3, x11
         b.ge .failed
