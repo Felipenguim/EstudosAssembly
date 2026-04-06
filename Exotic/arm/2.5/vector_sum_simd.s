@@ -60,18 +60,26 @@ END_HEADER:
 
 
 START:
+	mov x5, #(1000000 & 0xFFFF)          // bits 0-15
+	movk x5, #(1000000 >> 16), lsl #16   //bits 16-31
+	adr x6, ARRAY  // pointer to array
+
+3:
 	//test code for packed_sum
 	mov x0, #1024 // length of array
-	adr x1, ARRAY // pointer to array
-	packed_sum_i64_neon // call packed_sum
+	mov x1, x6
+	packed_sum_i8_neon
 	// x0 now contains the sum of the array
+
+	subs x5, x5, #1
+	b.ne 3b
 
 	//saida em x0, para o exit
 	_exit
 
 ARRAY:
 	.rept 1024
-	.quad 3
+	.byte 3
 	.endr
 
 
