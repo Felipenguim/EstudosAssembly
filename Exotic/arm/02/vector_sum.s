@@ -51,8 +51,8 @@ END_HEADER:
 
 .INCLUDE "lib/SYS/LINUX/SYSCALLS.S"
 .INCLUDE "lib/SYS/exit.s"
-.INCLUDE "lib/math/int/packed_sum.s"
-
+.INCLUDE "lib/math/int/packed_sum.s"   //SÓ FUNCIONAM SE FOREM MACROS, SE FOREM FUNÇÕES NÃO FUNCIONAM, POR CONTA DO HEADER APONTANDO PRO START
+ 
 //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;INSTRUCTIONS;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -60,17 +60,29 @@ END_HEADER:
 
 
 START:
+	mov x5, #(1000000 & 0xFFFF)          // bits 0-15
+	movk x5, #(1000000 >> 16), lsl #16 
+	adr x6, ARRAY  // pointer to array
+
+3:
 	//test code for packed_sum
-	mov x0, #6 // length of array
-	adr x1, ARRAY // pointer to array
+	mov x0, #1024 // length of array
+	//mov x0, #(1000000 & 0xFFFF)          // bits 0-15
+	//movk x0, #(1000000 >> 16), lsl #16   // bits 16-31
+	mov x1, x6
 	_packed_sum // call packed_sum
 	// x0 now contains the sum of the array
+
+	subs x5, x5, #1
+	b.ne 3b
 
 	//saida em x0, para o exit
 	_exit
 
 ARRAY:
-	.quad 1, 2, 3, 4, 5, 200
+	.rept 1024
+	.quad 3
+	.endr
 
 
 
