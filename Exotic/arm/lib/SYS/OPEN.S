@@ -4,112 +4,24 @@
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-.MACRO __OPEN
+.MACRO _open
+// int _open(int dirfd, char* path, int flags, int mode);
+//
+//   Opens the file at {path} relative to the directory {dirfd}.
+//   Use AT_FDCWD (-100) in {dirfd} to resolve relative to current directory.
+//   {flags} controls access mode: O_RDONLY=0, O_RDWR=2, O_CREAT=0100, etc.
+//   {mode} sets permissions when O_CREAT is used, otherwise ignored.
+//   Returns file descriptor in X0 on success, negative errno on failure.
+//
+//   X0 = dirfd
+//   X1 = path
+//   X2 = flags
+//   X3 = mode
 
-	_PUSH_VOLATILES
+	mov x8, #56
+	SVC #0
 
-	LDP X0,X1,[SP,VOLATILE_LENGTH]
-	LDP X2,X3,[SP,VOLATILE_LENGTH+16]
-
-	BL OPEN
-
-	MOV X20,X0
-
-	_POP_VOLATILES
-
-	MOV X0,X20
-
-.ENDM
-
-.MACRO _OPEN DIR PATH FLAGS MODE
-
-	SUB SP,SP,32
-	MOV X20,\DIR
-	STR X20,[SP,0]
-	MOV X20,\PATH
-	STR X20,[SP,8]
-	MOV X20,\FLAGS
-	STR X20,[SP,16]	
-	MOV X20,\MODE
-	STR X20,[SP,24]
-
-	__OPEN
-
-	ADD SP,SP,32
-
-.ENDM
-
-.MACRO _OPEN_RW PATH
-	_OPEN SYS_AT_FDCWD \PATH SYS_READ_WRITE 0
-.ENDM
-
-.MACRO _OPEN_CREATE_EXECUTE PATH
-	_OPEN SYS_AT_FDCWD,\PATH,(SYS_READ_WRITE+SYS_CREATE_FILE+SYS_TRUNCATE),SYS_EXECUTE_PERMISSIONS
-.ENDM
-
-.MACRO _OPEN_CREATE_DEFAULT PATH
-	_OPEN SYS_AT_FDCWD,\PATH,(SYS_READ_WRITE+SYS_CREATE_FILE),SYS_DEFAULT_PERMISSIONS
-.ENDM
-
-.IFDEF VERBOSE_LOGS
-
-.INCLUDE "IO/LOG_TEXT.S"
-.INCLUDE "IO/LOG_DECIMAL.S"
-
-1:
-	.ASCII "OPENING: '"
-2:
-	.ASCII "' SUCCESS. FD="
-3:
-	.ASCII "' FAIL.\n"
-
-.ENDIF
-
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-
-.ALIGN 2
-
-OPEN:	// {W0} OPEN({W0}, {X1}, {W2}, {W3});
-	// RETURNS FILE DESCRIPTOR IN {W0}
-
-.IFDEF VERBOSE_LOGS
-	SUB SP,SP,48
-	STP X0,X1,[SP,16]
-	STP X2,X3,[SP,0]
-	STR LR,[SP,32]
-	_LOG_TEXT 1b 10
-	LDP X0,X1,[SP,16]
-	_LOG_NULL_TERM_STRING X1 // LOG FILENAME
-	LDP X0,X1,[SP,16]
-	LDP X2,X3,[SP,0]
-	LDR LR,[SP,32]
-	ADD SP,SP,48
-
-.ENDIF
 	
-	ADD X1, X1, LOAD_ADDRESS // position independent LDR basically
-	MOV W8, SYS_OPEN 
-	SVC 0
-
-.IFDEF VERBOSE_LOGS
-        SUB SP,SP,16
-        STR W0,[SP]
-	CMP W0,0
-	B.GE .SUCCESS
-.FAIL:
-	_LOG_TEXT 3b 8
-	B .QUIT
-.SUCCESS:
-	_LOG_TEXT 2b 14
-        LDR W0,[SP]
-  	_LOG_DECIMAL X0
-        _LOG_TEXT (3b+7),1
-.QUIT:
-	LDR W0,[SP]
-        ADD SP,SP,16
-.ENDIF
-
-	RET
+.ENDM
 
 .ENDIF
