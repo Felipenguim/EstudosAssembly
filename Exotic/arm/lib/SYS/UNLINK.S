@@ -4,8 +4,11 @@
 .INCLUDE "SYS/HELPER.S"
 
 ///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
 
+// int __UNLINK()
+// Internal helper — unlinks using {path} from the stack above volatiles.
+// Sets dirfd to AT_FDCWD (-100) automatically. Preserves all volatile registers.
+// @return X0 — 0 on success, negative errno on failure
 .MACRO __UNLINK
 
 	_PUSH_VOLATILES
@@ -19,6 +22,10 @@
 
 .ENDM
 
+// int _UNLINK(path)
+// Deletes the file at {path} relative to the current working directory.
+// @param path X0 — pointer to null-terminated file path string
+// @return X0 — 0 on success, negative errno on failure
 .MACRO _UNLINK PATH
 
 	SUB SP,SP,16
@@ -42,7 +49,6 @@
 
 .ENDIF
 
-///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
 .ALIGN 2

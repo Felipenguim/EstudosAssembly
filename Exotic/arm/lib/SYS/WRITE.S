@@ -4,8 +4,10 @@
 .INCLUDE "SYS/HELPER.S"
 
 ///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
 
+// void __WRITE()
+// Internal helper — writes using {fd}, {buffer}, {num_bytes} from the stack above volatiles.
+// Preserves all volatile registers.
 .MACRO __WRITE
 
 	_PUSH_VOLATILES
@@ -19,6 +21,13 @@
 
 .ENDM
 
+// ssize_t _WRITE(fd, buffer, num_bytes)
+// Writes {num_bytes} bytes from {buffer} to file descriptor {fd}.
+// Returns number of bytes written in X0 on success, negative errno on failure.
+// @param fd X0 — file descriptor to write to
+// @param buffer X1 — pointer to source buffer
+// @param num_bytes X2 — number of bytes to write
+// @return X0 — number of bytes written on success, negative errno on failure
 .MACRO _WRITE FD BUFFER NUM_BYTES
 
 	SUB SP,SP,32
@@ -35,6 +44,12 @@
 
 .ENDM
 
+// ssize_t _PRINT(buffer, num_bytes)
+// Writes {num_bytes} bytes from {buffer} to stdout (fd=1).
+// Returns number of bytes written in X0 on success, negative errno on failure.
+// @param buffer X1 — pointer to data buffer
+// @param num_bytes X2 — number of bytes to write
+// @return X0 — number of bytes written on success, negative errno on failure
 .MACRO _PRINT BUFFER NUM_BYTES
 
 	_WRITE SYS_STDOUT \BUFFER \NUM_BYTES
@@ -55,7 +70,6 @@
 
 .ENDIF
 
-///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
 .ALIGN 2

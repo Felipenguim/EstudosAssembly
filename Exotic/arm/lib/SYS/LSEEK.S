@@ -4,8 +4,11 @@
 .INCLUDE "SYS/HELPER.S"
 
 ///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
 
+// off_t __LSEEK()
+// Internal helper — seeks using {fd}, {offset}, {whence} from the stack above volatiles.
+// Preserves all volatile registers; result returned in X0.
+// @return X0 — resulting file offset on success, negative errno on failure
 .MACRO __LSEEK
 
 	_PUSH_VOLATILES
@@ -19,6 +22,13 @@
 
 .ENDM
 
+// off_t _LSEEK(fd, offset, whence)
+// Repositions the file offset of {fd} to {offset} bytes relative to {whence}.
+// Returns the resulting offset from the beginning of the file in X0 on success.
+// @param fd X0 — file descriptor
+// @param offset X1 — byte offset to seek to
+// @param whence X2 — reference point (SEEK_SET=0, SEEK_CUR=1, SEEK_END=2)
+// @return X0 — resulting file offset on success, -1 on failure
 .MACRO _LSEEK FD, OFFSET, WHENCE
 
 	SUB SP,SP,32
@@ -49,7 +59,6 @@
 
 .ENDIF
 
-///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
 .ALIGN 2

@@ -8,10 +8,13 @@
 .INCLUDE "SYS/LINUX/SYSCALLS.S"
 
 ///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
 
+// int _chmod(char* path)
+// Changes the permissions of the file at {path} to 0755 using fchmodat with AT_FDCWD.
+// Note: mode is hardcoded to 0755. Currently unverified — may not be set up correctly.
+// @param path X1 — pointer to null-terminated filename string
+// @return X0 — 0 on success, negative errno on failure
 .MACRO _chmod
-// x1 is the pointer to the filename
 	MOV X0, #-100             // AT_FDCWD
     MOV X2, #0755             // mode (mas atenção, isso precisa ser octal)
     MOV X3, #0                // flags

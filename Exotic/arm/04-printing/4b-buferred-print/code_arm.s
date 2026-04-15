@@ -51,7 +51,7 @@ END_HEADER:
 
 .INCLUDE "SYS/LINUX/SYSCALLS.S"
 .INCLUDE "SYS/exit.s"
-.INCLUDE "SYS/IO/print.s"
+.INCLUDE "SYS/print.s"
  
 //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;INSTRUCTIONS;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

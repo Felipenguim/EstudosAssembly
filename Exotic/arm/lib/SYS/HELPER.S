@@ -2,12 +2,13 @@
 .EQU HELPER,1
 
 ///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
 
 .EQU VOLATILE_LENGTH,160
 
-.MACRO _PUSH_VOLATILES // THIS IS BECAUSE ARM IS TRASH AND GNU IS TRASH
-			// AND BOOMERS ARE TRASH
+// void _PUSH_VOLATILES()
+// Saves LR and all volatile registers (X0–X18) to the stack.
+// @return — SP decremented by VOLATILE_LENGTH (160 bytes)
+.MACRO _PUSH_VOLATILES
 	SUB SP, SP, VOLATILE_LENGTH
 	STP LR, X0, [SP,0]
 	STP X1, X2, [SP,16]
@@ -21,7 +22,10 @@
 	STP X17, X18, [SP,144]
 .ENDM
 
-.MACRO _POP_VOLATILES	// SAME STORY
+// void _POP_VOLATILES()
+// Restores LR and all volatile registers (X0–X18) from the stack.
+// @return — SP incremented by VOLATILE_LENGTH (160 bytes)
+.MACRO _POP_VOLATILES
 	LDP LR, X0, [SP,0]
 	LDP X1, X2, [SP,16]
 	LDP X3, X4, [SP,32]

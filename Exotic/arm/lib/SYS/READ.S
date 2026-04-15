@@ -4,8 +4,11 @@
 .INCLUDE "SYS/HELPER.S"
 
 ///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
 
+// ssize_t __READ()
+// Internal helper — reads using {fd}, {buffer}, {num_bytes} from the stack above volatiles.
+// Preserves all volatile registers; result returned in X0.
+// @return X0 — number of bytes read on success, negative errno on failure
 .MACRO __READ
 
 	_PUSH_VOLATILES
@@ -23,6 +26,13 @@
 
 .ENDM
 
+// ssize_t _READ(fd, buffer, num_bytes)
+// Reads up to {num_bytes} bytes from file descriptor {fd} into {buffer}.
+// Returns the number of bytes read in X0 on success, negative errno on failure.
+// @param fd X0 — file descriptor to read from
+// @param buffer X1 — pointer to destination buffer
+// @param num_bytes X2 — maximum number of bytes to read
+// @return X0 — number of bytes read on success, negative errno on failure
 .MACRO _READ FD BUFFER NUM_BYTES
 
 	SUB SP,SP,32
@@ -52,7 +62,6 @@
 
 .ENDIF
 
-///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
 .ALIGN 2
