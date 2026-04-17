@@ -5,7 +5,7 @@
 .arch armv8-a
 .equ LOAD_ADDRESS, 0x8000
 .equ CODE_SIZE, (END-END_HEADER) // everything beyond the HEADER is code
-
+.equ PRINT_BUFFER_SIZE, 4096 // 4KB buffer for printing (must be large enough to hold all output)
 //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;HEADER;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -39,7 +39,7 @@ PROGRAM_HEADER:
 	.quad LOAD_ADDRESS+0x78 // virtual address of segment in memory
 	.quad 0x0000000000000000 // physical address of segment in memory (ignored?)
 	.quad CODE_SIZE // size (bytes) of segment in file image
-	.quad CODE_SIZE // size (bytes) of segment in memory
+	.quad CODE_SIZE + PRINT_BUFFER_SIZE // size (bytes) of segment in memory
 	.quad 0x0000000000000000 // alignment (doesn't matter, only 1 segment)
 END_HEADER:
 
@@ -51,7 +51,9 @@ END_HEADER:
 
 .INCLUDE "SYS/LINUX/SYSCALLS.S"
 .INCLUDE "SYS/exit.s"
-.INCLUDE "SYS/print.s"
+
+.INCLUDE "IO/print_chars.s"
+.INCLUDE "IO/print_string.s"
  
 //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;INSTRUCTIONS;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -59,17 +61,26 @@ END_HEADER:
 
 START:
 
-	mov x0, #1 // file descriptor 1 is stdout
-	adr x1, TEXT 
-	mov x2, #(ADDRESS_AFTER_TEXT-TEXT)
-
-	mov x15, #10000
-
+	movz x26, #0x4240           // zera x26 e coloca os 16 bits baixos
+	movk x26, #0xF, lsl #16     // mantém os bits baixos e insere os bits altos
+	//mov x26, #10000
 .LOOP:
-	_print
-	subs x15, x15, #1
+	
+	// normal char array (length known at runtime)
+	
 	mov x0, #1 // file descriptor 1 is stdout
+    adr x1, TEXT
+    mov x2, #(ADDRESS_AFTER_TEXT-TEXT)
+	bl print_chars
+	subs x26, x26, #1
 	b.ne .LOOP
+
+	//null-terminated string (length unknown at runtime)
+	mov x0, #1 // file descriptor 1 is stdout
+	adr x1, NULL_TERMINATED_STRING
+	bl print_string
+
+	bl print_buffer_flush //flush any remaining output in the buffer
 
 	mov x0, #0 // exit code 0
 	_exit
@@ -77,8 +88,14 @@ START:
 
 
 TEXT:	//sample text
-	.asciz "Obrigado agata! :) "
+	.ascii "Obrigado agata! :) "
 
 ADDRESS_AFTER_TEXT:
 
+NULL_TERMINATED_STRING:
+	.asciz "Vtnc agata! :)"
+
 END:
+
+
+PRINT_BUFFER:

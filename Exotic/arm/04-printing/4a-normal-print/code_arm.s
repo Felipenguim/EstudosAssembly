@@ -51,7 +51,7 @@ END_HEADER:
 
 .INCLUDE "SYS/LINUX/SYSCALLS.S"
 .INCLUDE "SYS/exit.s"
-.INCLUDE "SYS/IO/print.s"
+.INCLUDE "IO/print.s"
  
 //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;INSTRUCTIONS;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -63,7 +63,8 @@ START:
 	adr x1, TEXT 
 	mov x2, #(ADDRESS_AFTER_TEXT-TEXT)
 
-	mov x15, #10000
+	movz x15, #0x4240           // zera x26 e coloca os 16 bits baixos
+	movk x15, #0xF, lsl #16     // mantém os bits baixos e insere os bits altos
 
 .LOOP:
 	_print
