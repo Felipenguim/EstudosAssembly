@@ -55,46 +55,79 @@ END_HEADER:
 .INCLUDE "IO/print_chars.s"
 .INCLUDE "IO/print_string.s"
 .INCLUDE "IO/print_buffer_flush.s"
- 
+
+.INCLUDE "IO/print_int_b.s"
+.INCLUDE "IO/print_int_o.s"
+.INCLUDE "IO/print_int_h.s"
+.INCLUDE "IO/print_int_d.s"
+
 //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;INSTRUCTIONS;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 START:
 
-	movz x26, #0x4240           // zera x26 e coloca os 16 bits baixos
-	movk x26, #0xF, lsl #16     // mantém os bits baixos e insere os bits altos
-	//mov x26, #10000
-.LOOP:
 	
-	// normal char array (length known at runtime)
-	
-	mov x0, #1 // file descriptor 1 is stdout
-    adr x1, TEXT
-    mov x2, #(ADDRESS_AFTER_TEXT-TEXT)
+
+	//valor binario
+	mov x0, #1
+	adr x1, VALUE //pega o endereço, x1 ponteiro de VALUE
+	ldr x1, [x1] // carrega o valor de VALUE em x1
+	bl print_int_b
+
+
+	mov x0, #1 // file descriptor 1 (stdout)
+	adr x1, NEWLINE // pointer to newline character
+	mov x2, #1 // length of 1 byte
 	bl print_chars
-	subs x26, x26, #1
-	b.ne .LOOP
 
-	//null-terminated string (length unknown at runtime)
-	mov x0, #1 // file descriptor 1 is stdout
-	adr x1, NULL_TERMINATED_STRING
-	bl print_string
+	//valor octal
+	mov x0, #1
+	adr x1, VALUE 
+	ldr x1, [x1]
+	bl print_int_o
 
-	bl print_buffer_flush //flush any remaining output in the buffer
+	mov x0, #1 
+	adr x1, NEWLINE 
+	mov x2, #1 
+	bl print_chars
+
+	//valor hexadecimal
+	mov x0, #1
+	adr x1, VALUE 
+	ldr x1, [x1]
+	bl print_int_h
+
+	mov x0, #1 
+	adr x1, NEWLINE 
+	mov x2, #1 
+	bl print_chars
+
+
+	// //valor decimal
+	mov x0, #1
+	adr x1, VALUE 
+	ldr x1, [x1]
+	bl print_int_d
+
+	mov x0, #1 
+	adr x1, NEWLINE 
+	mov x2, #1 
+	bl print_chars
+
+	bl print_buffer_flush
 
 	mov x0, #0 // exit code 0
 	_exit
 
 
+VALUE:
+	.quad 67 // six seven
+	
 
-TEXT:	//sample text
-	.ascii "Obrigado agata! :) "
+NEWLINE:
+	.byte 0x0A // newline character
 
-ADDRESS_AFTER_TEXT:
-
-NULL_TERMINATED_STRING:
-	.asciz "Vtnc agata! :)"
 
 END:
 

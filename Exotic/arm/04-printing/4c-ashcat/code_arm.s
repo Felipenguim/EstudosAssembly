@@ -101,7 +101,8 @@ START:
 	bl print_chars
 
 	bl print_buffer_flush 
-
+		
+	
 	mov x0, x19 // fd
 	_close
 	cmp x0, #0
