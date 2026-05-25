@@ -11,7 +11,12 @@
 print_chars:
    //all functions that call other function with bl must save the LR, otherwise it will be lost when the called function returns
    str x30, [sp, #-16]!   // salva o LR (e mantém stack 16-byte aligned)
-    
+   
+   //função calle-saver salvando os registradores usados
+   stp x3,  x7,  [sp, #-16]!
+   stp x9,  x10, [sp, #-16]!
+   str x14,      [sp, #-16]!
+
    adr x7, PRINT_BUFFER 
    adr x9, PRINT_BUFFER_LEN
    ldr x3, [x9] //current length of the buffer
@@ -39,6 +44,10 @@ print_chars:
    adr x9, PRINT_BUFFER_LEN
    str x7, [x9] //update buffer length
 
+
+   ldr x14, [sp], #16
+   ldp x9, x10, [sp], #16
+   ldp x3, x7, [sp], #16
 
    ldr x30, [sp], #16          // restore LR
    ret 

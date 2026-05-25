@@ -9,6 +9,7 @@
 // @param num X1 — numerical value to write
 print_int_h:
     stp  x29, x30, [sp, #-16]!
+    stp x2, x3, [sp, #-16]!
     mov  x29, sp //base stack frame pointer 
 
 
@@ -43,6 +44,7 @@ print_int_h:
     bl print_chars
 
     mov sp, x29 //restaura o stack pointer
+    ldp x2, x3, [sp], #16 //restaura os registradores usados
     ldp x29, x30, [sp], #16    // restaura o LR (e desalinha o stack)
     ret
 

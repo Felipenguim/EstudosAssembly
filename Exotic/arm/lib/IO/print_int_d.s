@@ -9,6 +9,9 @@
 // @param num X1 — binary value to write
 print_int_d:
     stp  x29, x30, [sp, #-16]!
+    stp x2, x3, [sp, #-16]!
+    stp x4, x5, [sp, #-16]!
+    str x6, [sp, #-16]!
     mov  x29, sp //base stack frame pointer 
 
 
@@ -43,6 +46,9 @@ print_int_d:
     bl   print_chars
 
     mov  sp, x29
+    ldp  x2, x3, [sp], #16
+    ldp  x4, x5, [sp], #16
+    ldr  x6, [sp], #16
     ldp  x29, x30, [sp], #16
     ret
 
