@@ -1,5 +1,5 @@
-.IFNDEF PRINt_ARRAY_INT
-.EQU PRINt_ARRAY_INT,1
+.IFNDEF PRINT_ARRAY_INT
+.EQU PRINT_ARRAY_INT,1
 
 .INCLUDE "IO/print_chars.s"
 .INCLUDE "IO/print_int_d.s"
@@ -22,6 +22,7 @@ print_array_int:
     stp x6, x7, [sp, #-16]!
     stp x8, x9, [sp, #-16]!
     stp x10, x11, [sp, #-16]!
+    stp x12, x13, [sp, #-16]!
     mov x29, sp
 
     //total offset in x4 has to be splited in row offset 32 high bits and column offset 32 low bits
@@ -48,8 +49,53 @@ print_array_int:
 
 
 .loop_rows:
+    mov x11, x7 //x11 vai ter o index da array ajustado
+    mov x12, x9 //contador de colunas
 
+.loop_cols:
+    ldr x1, [x11] //carrega o valor do elemento atual
+    //x0 com fd já 
+    blr x5 //chama a função de impressão
+
+    cmp x12, #1 //se for a última coluna
+    b.eq .no_comma //não printa a vírgula
+
+    adr x1, .grammar+1
+    mov x2, #1
+    bl print_chars //print da virgula
+
+
+.no_comma:
+    add x11, x11, x6 //avança para o próximo elemento da mesma linha (coluna adjacente)
+    subs x12, x12, #1 //decrementa o contador de colunas
+    //seta as flags para o último elemento da linha
+    b.ne .loop_cols //continua o loop de colunas se ainda não terminou
+
+    add x7, x7, x4 //avança para a próxima linha
+
+    cmp x8, 1 //se for a última linha
+    b.le .done
+
+    //print `;\n`
+    mov x1, .grammar+3
+    mov x2, #2
+    bl print_chars
+
+    sub x8, x8, #1 //decrementa o contador de linhas
+    b.ne .loop_rows
+
+
+.done:
+    // print `];\n`;
+	mov x1,.grammar+2
+    mov x2, #3
+    bl print_chars
+
+
+
+    //end
     mov sp, x29 
+    ldp x12, x13, [sp], #16
     ldp x10, x11, [sp], #16
     ldp x8, x9, [sp], #16
     ldp x6, x7, [sp], #16
@@ -57,6 +103,6 @@ print_array_int:
     ret
 
 .grammar:
-    ascii "[,];\n"
+    .ascii "[,];\n"
 
 .ENDIF

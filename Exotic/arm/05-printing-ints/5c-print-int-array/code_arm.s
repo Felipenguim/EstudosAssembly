@@ -53,7 +53,7 @@ END_HEADER:
 .INCLUDE "SYS/exit.s"
 
 .INCLUDE "IO/print_chars.s"
-.INCLUDE "IO/print_string.s"
+.INCLUDE "IO/print_int_arrays.s"
 .INCLUDE "IO/print_buffer_flush.s"
 
 .INCLUDE "IO/print_int_b.s"
@@ -69,51 +69,14 @@ START:
 
 	
 
-	//valor binario
 	mov x0, #1
-	adr x1, VALUE //pega o endereço, x1 ponteiro de VALUE
-	ldr x1, [x1] // carrega o valor de VALUE em x1
-	bl print_int_b
+	adr x1, ARRAY
+	mov x2, #3
+	mov x3, #5
+	mov x4, #0
+	adr x5, print_int_d
+	bl print_array_int:
 
-
-	mov x0, #1 // file descriptor 1 (stdout)
-	adr x1, NEWLINE // pointer to newline character
-	mov x2, #1 // length of 1 byte
-	bl print_chars
-
-	//valor octal
-	mov x0, #1
-	adr x1, VALUE 
-	ldr x1, [x1]
-	bl print_int_o
-
-	mov x0, #1 
-	adr x1, NEWLINE 
-	mov x2, #1 
-	bl print_chars
-
-	//valor hexadecimal
-	mov x0, #1
-	adr x1, VALUE 
-	ldr x1, [x1]
-	bl print_int_h
-
-	mov x0, #1 
-	adr x1, NEWLINE 
-	mov x2, #1 
-	bl print_chars
-
-
-	// //valor decimal
-	mov x0, #1
-	adr x1, VALUE 
-	ldr x1, [x1]
-	bl print_int_d
-
-	mov x0, #1 
-	adr x1, NEWLINE 
-	mov x2, #1 
-	bl print_chars
 
 	bl print_buffer_flush
 
@@ -121,13 +84,10 @@ START:
 	_exit
 
 
-VALUE:
-	.quad 67 // six seven
-	
-
-NEWLINE:
-	.byte 0x0A // newline character
-
+ARRAY:
+    .quad 1, 2, 3, 4, 5
+	.quad 6, 7, 8, 9, 10
+	.quad 11, 12, 13, 14, 15
 
 END:
 
