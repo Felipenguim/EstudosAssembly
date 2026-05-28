@@ -77,10 +77,14 @@ START:
 	mov x10, #67
 	stp x9, x10, [sp, #-16]!
 	bl print_stack
+	ldp x9, x10, [sp], #16
 	
 
-	ldp x9, x10, [sp], #16
-
+	mov x0, #1
+	adr x1, ARRAY
+	adr x2, print_int_h
+	mov x3, 15*8
+	bl print_memory
 
 	bl print_buffer_flush
 
@@ -88,10 +92,10 @@ START:
 	_exit
 
 
-// ARRAY:
-//     .quad 1, 2, 3, 4, 5
-// 	.quad 6, 7, 8, 9, 10
-// 	.quad 11, 12, 13, 14, 15
+ARRAY:
+    .quad 11845, 2, 3, 4, 58412416532157
+	.quad 6, 7, 8, 9, 10
+	.quad 11, 12, 11845452, 14, 15
 
 
 
