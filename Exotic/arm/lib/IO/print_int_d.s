@@ -46,9 +46,9 @@ print_int_d:
     bl   print_chars
 
     mov  sp, x29
-    ldp  x2, x3, [sp], #16
-    ldp  x4, x5, [sp], #16
     ldr  x6, [sp], #16
+    ldp  x4, x5, [sp], #16
+    ldp  x2, x3, [sp], #16
     ldp  x29, x30, [sp], #16
     ret
 

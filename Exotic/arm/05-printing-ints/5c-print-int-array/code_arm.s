@@ -71,11 +71,11 @@ START:
 
 	mov x0, #1
 	adr x1, ARRAY
-	mov x2, #3
-	mov x3, #5
+	mov x2, #5
+	mov x3, #3
 	mov x4, #0
 	adr x5, print_int_d
-	bl print_array_int:
+	bl print_array_int
 
 
 	bl print_buffer_flush
@@ -88,6 +88,8 @@ ARRAY:
     .quad 1, 2, 3, 4, 5
 	.quad 6, 7, 8, 9, 10
 	.quad 11, 12, 13, 14, 15
+
+.balign 4
 
 END:
 

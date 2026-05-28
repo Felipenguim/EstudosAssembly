@@ -67,8 +67,9 @@ print_array_int:
 
 .no_comma:
     add x11, x11, x6 //avança para o próximo elemento da mesma linha (coluna adjacente)
-    subs x12, x12, #1 //decrementa o contador de colunas
-    //seta as flags para o último elemento da linha
+    // sub x12, x12, #1 //decrementa o contador de colunas
+    // cmp x12, #0
+    subs x12, x12, #1 //igual a operação acima, mas atualiza os flags para o próximo teste
     b.ne .loop_cols //continua o loop de colunas se ainda não terminou
 
     add x7, x7, x4 //avança para a próxima linha
@@ -77,17 +78,19 @@ print_array_int:
     b.le .done
 
     //print `;\n`
-    mov x1, .grammar+3
+    adr x1, .grammar+3
     mov x2, #2
     bl print_chars
 
-    sub x8, x8, #1 //decrementa o contador de linhas
+    // sub x8, x8, #1 //decrementa o contador de linhas
+    // cmp x8, #0
+    subs x8, x8, #1
     b.ne .loop_rows
 
 
 .done:
     // print `];\n`;
-	mov x1,.grammar+2
+	adr x1,.grammar+2
     mov x2, #3
     bl print_chars
 
@@ -104,5 +107,5 @@ print_array_int:
 
 .grammar:
     .ascii "[,];\n"
-
+.balign 4
 .ENDIF
