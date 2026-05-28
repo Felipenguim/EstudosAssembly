@@ -53,7 +53,8 @@ END_HEADER:
 .INCLUDE "SYS/exit.s"
 
 .INCLUDE "IO/print_chars.s"
-.INCLUDE "IO/print_int_arrays.s"
+.INCLUDE "IO/print_memory.s"
+.INCLUDE "IO/print_stack.s"
 .INCLUDE "IO/print_buffer_flush.s"
 
 .INCLUDE "IO/print_int_b.s"
@@ -70,13 +71,15 @@ START:
 	
 
 	mov x0, #1
-	adr x1, ARRAY
-	mov x2, #5
-	mov x3, #3
-	mov x4, #0
-	adr x5, print_int_d
-	bl print_array_int
+	mov x1, #1 //indexado em 0, se x1 = 1 printa sp+8 e sp+0
+	adr x2, print_int_d
+	mov x9, #777
+	mov x10, #67
+	stp x9, x10, [sp, #-16]!
+	bl print_stack
 	
+
+	ldp x9, x10, [sp], #16
 
 
 	bl print_buffer_flush
@@ -85,12 +88,12 @@ START:
 	_exit
 
 
-ARRAY:
-    .quad 1, 2, 3, 4, 5
-	.quad 6, 7, 8, 9, 10
-	.quad 11, 12, 13, 14, 15
+// ARRAY:
+//     .quad 1, 2, 3, 4, 5
+// 	.quad 6, 7, 8, 9, 10
+// 	.quad 11, 12, 13, 14, 15
 
-.balign 4
+
 
 END:
 
