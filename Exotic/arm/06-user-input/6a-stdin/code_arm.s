@@ -53,8 +53,9 @@ END_HEADER:
 .INCLUDE "SYS/exit.s"
 
 .INCLUDE "IO/print_chars.s"
-.INCLUDE "IO/print_memory.s"
-.INCLUDE "IO/print_stack.s"
+.INCLUDE "IO/strlen.s"
+.INCLUDE "IO/parse_int.s"
+.INCLUDE "IO/read_chars.s"
 .INCLUDE "IO/print_buffer_flush.s"
 
 .INCLUDE "IO/print_int_b.s"
@@ -67,37 +68,91 @@ END_HEADER:
 //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 START:
+	mov x0, #1 //stdout
+	adr x1, question_1
+	mov x2, #19
+	bl print_chars
+	bl print_buffer_flush
 
-	
+	mov x0, #0 //stdin
+	adr x1, name_buffer
+	mov x2, #32
+	_read
 
+	mov x0, #1 //stdout
+	adr x1, question_2
+	mov x2, #17
+	bl print_chars
+	bl print_buffer_flush
+
+	mov x0, #0 //stdin
+	adr x1, age_buffer
+	mov x2, #8
+	_read
+
+	mov x0, #1 //stdout
+	adr x1, greeting
+	mov x2, #22
+	bl print_chars
+
+	adr x0, age_buffer
+	bl strlen
+	sub x0, x0, #1
+	adr x1, age_buffer
+	// x1 = endereço de AGE_BUFFER  (carregado com adr antes)
+	// x0 = retorno do strlen, já decrementado (o offset do \n)
+	mov  w2, #0
+	strb w2, [x1, x0]
+
+	mov x0, x1 //pegando o endereço 
+	bl parse_int
+
+	add x0, x0, #1 //age + 1
+	mov x1, x0
 	mov x0, #1
-	mov x1, #1 //indexado em 0, se x1 = 1 printa sp+8 e sp+0
-	adr x2, print_int_d
-	mov x9, #777
-	mov x10, #67
-	stp x9, x10, [sp, #-16]!
-	bl print_stack
-	ldp x9, x10, [sp], #16
-	
+	bl print_int_d
 
+	mov x0, #1 //stdout
+	adr x1, greeting+22
+	mov x2, #2
+	bl print_chars
+
+	adr x0, name_buffer
+	bl strlen
+	sub x0, x0, #1
+
+	mov x2, x0
 	mov x0, #1
-	adr x1, ARRAY
-	adr x2, print_int_h
-	mov x3, 15*8
-	bl print_memory
+	adr x1, name_buffer
+	bl print_chars
+
+	mov x0, #1 //stdout
+	adr x1, greeting+24
+	mov x2, #2
+	bl print_chars
+
 
 	bl print_buffer_flush
 
-	mov x0, #0 // exit code 0
+
+	mov x0, #0
 	_exit
 
+question_1:
+    .ascii "What is your name?\n"
 
-ARRAY:
-    .quad 11845, 2, 3, 4, 58412416532157
-	.quad 6, 7, 8, 9, -10
-	.quad 11, 12, 11845452, 14, -15
+question_2:
+    .ascii "How old are you?\n"
 
+greeting:
+    .ascii "I hope you make it to , .\n"
 
+name_buffer:
+    .zero 32
+
+age_buffer:
+    .zero 8
+	
 
 END:
 
