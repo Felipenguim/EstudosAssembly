@@ -49,111 +49,94 @@ END_HEADER:
 
 //.EQU VERBOSE_LOGS, 1
 
+.EQU BUFFER_SIZE_GETDENTS, 4096
+
 .INCLUDE "SYS/LINUX/SYSCALLS.S"
 .INCLUDE "SYS/exit.s"
-
-.INCLUDE "IO/strlen.s"
-.INCLUDE "IO/parse_int.s"
+.INCLUDE "SYS/OPEN.S"
+.INCLUDE "SYS/getdents64.s"
 .INCLUDE "IO/read_chars.s"
+.INCLUDE "IO/print_chars.s"
 .INCLUDE "IO/print_buffer_flush.s"
 
 .INCLUDE "IO/print_int_b.s"
 .INCLUDE "IO/print_int_o.s"
 .INCLUDE "IO/print_int_h.s"
 .INCLUDE "IO/print_int_d.s"
+.INCLUDE "IO/print_memory.s"
+
 
 //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;INSTRUCTIONS;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 START:
-	mov x0, #1 //stdout
-	adr x1, question_1
-	mov x2, #19
-	bl print_chars
-	bl print_buffer_flush
+	
+	//abrir a pasta /proc com todos os  
+	mov x0, #-100
+	adr x1, proc_dir
+	mov x2, #0x0 // O_RDONLY (0) 
+	mov x3, #0
+	_open
+	//fd in x0
+	mov x9, x0//guardar o fd de proc 
 
-	mov x0, #0 //stdin
-	adr x1, name_buffer
-	mov x2, #32
-	_read
+	// mov x1, x0
+	// mov x0, #1
+	// bl print_int_d
 
-	mov x0, #1 //stdout
-	adr x1, question_2
-	mov x2, #17
-	bl print_chars
-	bl print_buffer_flush
+	mov x0, x9 
+	adr x1, get_dir_info_buffer
+	mov x2, BUFFER_SIZE_GETDENTS
+	_getdents64
+	// mov x1, x0
+	// mov x0, #1
+	// bl print_int_d
 
-	mov x0, #0 //stdin
-	adr x1, age_buffer
-	mov x2, #8
-	_read
 
-	mov x0, #1 //stdout
-	adr x1, greeting
-	mov x2, #22
-	bl print_chars
-
-	adr x0, age_buffer
-	bl strlen
-	sub x0, x0, #1
-	adr x1, age_buffer
-	// x1 = endereço de AGE_BUFFER  (carregado com adr antes)
-	// x0 = retorno do strlen, já decrementado (o offset do \n)
-	mov  w2, #0
-	strb w2, [x1, x0]
-
-	mov x0, x1 //pegando o endereço 
-	bl parse_int
-
-	add x0, x0, #1 //age + 1
-	mov x1, x0
 	mov x0, #1
-	bl print_int_d
-
-	mov x0, #1 //stdout
-	adr x1, greeting+22
-	mov x2, #2
-	bl print_chars
-
-	adr x0, name_buffer
-	bl strlen
-	sub x0, x0, #1
-
-	mov x2, x0
-	mov x0, #1
-	adr x1, name_buffer
-	bl print_chars
-
-	mov x0, #1 //stdout
-	adr x1, greeting+24
-	mov x2, #2
-	bl print_chars
-
+	adr x1, get_dir_info_buffer
+	adr x2, print_int_h
+	mov x3, 280
+	bl print_memory
 
 	bl print_buffer_flush
 
+	//fazer um loop que ve certinho o tipo, tem que ser tipo 4, dir, se for, pega o nome, olha se é string de numeros
+	//se sim olha dentro para ver se é o tetris
+	//se não for 4 pula, sempre pulando com o numero que pega no d_reclen, guardar ele sempre
 
-	mov x0, #0
+	// mov x0, #0
 	_exit
 
-question_1:
-    .ascii "What is your name?\n"
+proc_dir:
+	.asciz "/proc"
 
-question_2:
-    .ascii "How old are you?\n"
+get_dir_info_buffer:
+	.zero BUFFER_SIZE_GETDENTS //4kb
 
-greeting:
-    .ascii "I hope you make it to , .\n"
 
-name_buffer:
-    .zero 32
-
-age_buffer:
-    .zero 8
-	
 
 END:
 
 
+
 PRINT_BUFFER:
+
+
+READ_BUFFER:
+
+
+
+//  0x8382: 0x1 0x0 0x0 0x0 0x0 0x0 0x0 0x0                                                                                                                
+//   0x838a: 0x1 0x0 0x0 0x0 0x0 0x0 0x0 0x0                                                                                                                
+//   0x8392: 0x18 0x0 0x4 0x2e 0x0 0x0 0x0 0x0                                                                                                              
+//   0x839a: 0x1 0x0 0x0 0x0 0x0 0x0 0x0 0x0                                                                                                                
+//   0x83a2: 0x2 0x0 0x0 0x0 0x0 0x0 0x0 0x0                                                                                                                
+//   0x83aa: 0x18 0x0 0x4 0x2e 0x2e 0x0 0x0 0x0                                                                                                             
+//   0x83b2: 0x9e 0x0 0x0 0xf0 0x0 0x0 0x0 0x0                                                                                                              
+//   0x83ba: 0x3 0x0 0x0 0x0 0x0 0x0 0x0 0x0                                                                                                                
+//   0x83c2: 0x18 0x0 0x8 0x66 0x62 0x0 0x0 0x0                                                                                                             
+//   0x83ca: 0x7 0x0 0x0 0xf0 0x0 0x0 0x0 0x0                                                                                                               
+//   0x83d2: 0x4 0x0 0x0 0x0 0x0 0x0 0x0 0x0                                                                                                                
+//   0x83da: 0x18 0x0 0x4 0x66 0x73 0x0 0x0 0x0 
