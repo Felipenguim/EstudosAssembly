@@ -81,33 +81,69 @@ START:
 	//fd in x0
 	mov x9, x0//guardar o fd de proc 
 
-	// mov x1, x0
-	// mov x0, #1
-	// bl print_int_d
+	cmp x0, #0
+	b.le .error
 
 	mov x0, x9 
 	adr x1, get_dir_info_buffer
 	mov x2, BUFFER_SIZE_GETDENTS
 	_getdents64
-	// mov x1, x0
-	// mov x0, #1
-	// bl print_int_d
+	cmp x0, #0
+	b.le .error
 
 
-	mov x0, #1
-	adr x1, get_dir_info_buffer
-	adr x2, print_int_h
-	mov x3, 280
-	bl print_memory
-
-	bl print_buffer_flush
+	mov x4, x0 //guardando valor máximo de bytes, será usado no loop 
 
 	//fazer um loop que ve certinho o tipo, tem que ser tipo 4, dir, se for, pega o nome, olha se é string de numeros
 	//se sim olha dentro para ver se é o tetris
 	//se não for 4 pula, sempre pulando com o numero que pega no d_reclen, guardar ele sempre
 
-	// mov x0, #0
+.loop_buffer_proc:
+	//x1 está no endereço inicial do buffer 
+	mov x5, x1 //guarda o endereço antes de mudar 
+	add x1, x1, #16 //pega o d_reclen
+	ldrh w2, [x1] //guarda o d_reclen
+
+	add x1, x1, #2 //type do dir/arquivo
+	ldrb w3, [x1]
+	cmp x3, #0x4 //dir type
+	b.ne .end_interaction //se não for diretório
+
+	sub x6, x2, #19 //total de bytes com o nome (len do nome)
+	add x1, x1, #1 //x1 endereço do nome agora
+
+	//fazer jeito de ver se o nome é composto por uma string de numeros 
+	
+
+
+	//se for uma string de números aí sim vamos para a parte de olhar o nome do arquivo 
+
+
+	//ao terminar essa primeira intereção de achar o pid do tetris gerar uma função separada que vai ser o find_pid
+
+
+.end_interaction:
+	sub x4, x4, x2
+	cmp x4, #0
+	b.le .no_process_tetris
+
+	add x5, x5, x2
+	mov x1, x5 //novo endereço 
+	b .loop_buffer_proc
+
+	
+
+	
+.done_cheat:
+	mov x0, #0
 	_exit
+
+.no_process_tetris:
+	mov x0, #-67 //código inventado para denotar que não há o tetris
+	_exit
+
+.error:
+	_exit  // processo saíra com x0 negativo
 
 proc_dir:
 	.asciz "/proc"
@@ -118,7 +154,6 @@ get_dir_info_buffer:
 
 
 END:
-
 
 
 PRINT_BUFFER:
@@ -140,3 +175,27 @@ READ_BUFFER:
 //   0x83ca: 0x7 0x0 0x0 0xf0 0x0 0x0 0x0 0x0                                                                                                               
 //   0x83d2: 0x4 0x0 0x0 0x0 0x0 0x0 0x0 0x0                                                                                                                
 //   0x83da: 0x18 0x0 0x4 0x66 0x73 0x0 0x0 0x0 
+
+
+//debug
+//  mov x1, x2
+// 	mov x0, #1
+// 	bl print_int_d
+// 	bl print_buffer_flush
+// 	b .done_cheat
+
+//debug string
+//  mov x2, #len
+// 	mov x0, #1
+// 	bl print_chars
+// 	bl print_buffer_flush
+// 	b .done_cheat
+
+//debug memory:
+// mov x0, #1
+// adr x1, get_dir_info_buffer
+// adr x2, print_int_h
+// mov x3, 280
+// bl print_memory
+
+// bl print_buffer_flush
