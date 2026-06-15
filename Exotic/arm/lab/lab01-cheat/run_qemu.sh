@@ -8,5 +8,5 @@ xxd -p -s 64 -l "$bytes_to_end" temp | xxd -r -p > binary
 
 rm temp*
 chmod +x binary
-qemu-aarch64-static ./binary
+sudo qemu-aarch64-static ./binary
 #echo "Exit code: $?"

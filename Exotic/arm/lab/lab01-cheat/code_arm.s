@@ -108,6 +108,71 @@ START:
 	//Se tudo se confirmar teremos a base salva 
 	//se não tem, próxima linha, o loop volta quando acha \n
 
+	//endereço da string com nome do pid em x0
+
+	//abrindo /proc/{pid}/maps
+	adr x8, map_name_path
+	adr x9, proc_directory_with_slash
+	mov x10, #0
+	.loop_str_proc:
+		ldrb w11, [x9], #1   // lê byte de x9, depois x9 += 1
+		strb w11, [x8], #1   // escreve byte em x8, depois x8 += 1
+		add x10, x10, #1
+		cmp x10, #6
+		b.ne .loop_str_proc
+
+	adr x8, map_name_path+6
+	mov x9, x0 //endereço da string do pid
+	mov x10, #0
+	.loop_pid_str:
+		ldrb w11, [x9], #1   // lê byte de x9, depois x9 += 1
+		cmp x11, #0 //ve se ta escrevendo um monte de padding ou não 
+		b.eq .end_loop_pid_str
+			strb w11, [x8], #1   // escreve byte em x8, depois x8 += 1
+			add x10, x10, #1
+			b .loop_pid_str
+		.end_loop_pid_str:
+	
+	adr x8, map_name_path+6 
+	add x8, x8, x10
+	adr x9, maps_file
+	mov x10, #0
+	.loop_maps_file:
+		ldrb w11, [x9], #1
+		strb w11, [x8], #1
+		add x10, x10, #1
+		cmp x10, #5
+		b.ne .loop_maps_file
+
+
+	mov x0, #-100
+	adr x1, map_name_path
+	mov x2, #0x0 // O_RDONLY (0) 
+	mov x3, #0
+	_open
+	mov x9, x0//guardar o fd de proc 
+
+	cmp x0, #0
+	b.le .error
+
+	mov x0, x9
+	//guardar um monte de bytes em um buffer
+	//fd in x0
+	adr x1, maps_file_content
+	mov x2, #4096
+	_read //len de bytes lidos em x0
+
+	cmp x0, #0
+	b.le .error
+
+	mov x0, #1
+	adr x1, maps_file_content
+	mov x2, #93
+	bl print_chars
+	bl print_buffer_flush
+	b .done_cheat
+	
+
 	
 .done_cheat:
 	mov x0, #0
@@ -117,10 +182,26 @@ START:
 	_exit  // processo saíra com x0 negativo
 
 wanted_name:
-	.asciz "tetris\n"
+	.asciz "unattended-upgr\n"
 
 get_dir_info_buffer:
 	.zero BUFFER_SIZE_GETDENTS //4kb
+
+proc_directory_with_slash:
+	.ascii "/proc/"
+
+maps_file:
+	.ascii "/maps"
+
+map_name_path:
+	.zero 32
+
+maps_file_content:
+	.zero 4096
+
+
+base_address_string:
+	.zero 12
 
 
 
