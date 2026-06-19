@@ -165,13 +165,81 @@ START:
 	cmp x0, #0
 	b.le .error
 
-	mov x0, #1
-	adr x1, maps_file_content
-	mov x2, #93
-	bl print_chars
-	bl print_buffer_flush
-	b .done_cheat
-	
+
+	//se chegou até aqui o processo existe
+	//logo não vou fazer nada se passar a len dos bytes lidos
+	//endereço já em x1
+	mov x14, x1
+	mov x10, x2
+	.try_to_find_correct_base_address:
+		adr x13, base_address_string
+		mov x12, #0 //guardará n bytes do base address
+		.loop_base_address:
+			ldrb w11, [x14], #1
+			cmp x11, #'-'
+			b.eq .end_loop_base_address
+			strb w11, [x13], #1
+			add x12, x12, #1
+			b .loop_base_address
+			.end_loop_base_address:
+
+		//nome da base address em base_address_string
+		.loop_for_process:
+			ldrb w11, [x14], #1 //x1 + x12 + 1
+			cmp w11, #'\n'
+			b.eq .end_line_maps
+			cmp w11, #'/' //se é barra tem que comparar o nome
+			b.eq .try_proccess_name
+			b .loop_for_process
+
+		.try_proccess_name:
+			adr x4, wanted_name
+			adr x6, possible_wanted_name
+			mov x5, x14 //está no endereço do primeiro byte pós /
+			.loop_after_slash:
+				ldrb w11, [x5], #1 //x5 termina logo após o / que encerra o nome ou na linha seguinte se o final for \n
+				cmp w11, #'/'
+				b.eq .end_loop_after_slash
+				cmp w11, #'\n'  //ultimo nome do path termina com \n
+				b.eq .end_loop_after_slash
+				strb w11, [x6], #1
+				b .loop_after_slash
+
+
+			.end_loop_after_slash: //compara se o nome foi achado
+			adr x6, possible_wanted_name
+				.loop_end_loop_after_slash:
+					ldrb w7, [x4], #1
+					cmp w7, #'\n' //chegou ao final e o nome está certo
+					b.eq .finded_name_in_maps
+					ldrb w8, [x6], #1
+					cmp w7, w8 
+					b.ne .not_the_correct_name_in_maps
+					b .loop_end_loop_after_slash
+
+					.not_the_correct_name_in_maps:
+						mov x14, x5 
+						sub x10, x14, x1
+						cmp x10, #0
+						b.le .error //
+						cmp w11, #'\n'
+						b.eq .end_line_maps
+						b .try_proccess_name
+
+		.end_line_maps: //achou a quebra de linha, começa de novo 
+			b .try_to_find_correct_base_address
+		
+		.finded_name_in_maps:
+		//nome base_address_string só seguir daqui
+			mov x0, #1
+			adr x1, base_address_string
+			mov x2, x12
+			bl print_chars
+			bl print_buffer_flush
+			b .done_cheat
+
+
+	//fazer a função get base address
 
 	
 .done_cheat:
@@ -181,8 +249,12 @@ START:
 .error:
 	_exit  // processo saíra com x0 negativo
 
+.error_not_proccess_in_maps:
+	mov x0, #99
+	_exit 
+
 wanted_name:
-	.asciz "unattended-upgr\n"
+	.asciz "tetris\n"
 
 get_dir_info_buffer:
 	.zero BUFFER_SIZE_GETDENTS //4kb
@@ -200,8 +272,12 @@ maps_file_content:
 	.zero 4096
 
 
+possible_wanted_name:
+	.zero 64
+
+
 base_address_string:
-	.zero 12
+	.zero 16
 
 
 
