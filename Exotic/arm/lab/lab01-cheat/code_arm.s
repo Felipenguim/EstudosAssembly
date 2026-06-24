@@ -59,6 +59,7 @@ END_HEADER:
 .INCLUDE "IO/read_chars.s"
 .INCLUDE "IO/print_chars.s"
 .INCLUDE "IO/print_string.s"
+.INCLUDE "IO/parse_int.s"
 .INCLUDE "IO/print_buffer_flush.s"
 
 .INCLUDE "IO/print_int_b.s"
@@ -168,7 +169,7 @@ START:
 	mov x14, x1
 	mov x10, x2
 	.try_to_find_correct_base_address:
-		adr x13, base_address_string
+		adr x13, base_address_string+2
 		mov x12, #0 //guardará n bytes do base address
 		.loop_base_address:
 			ldrb w11, [x14], #1
@@ -400,20 +401,59 @@ START:
 		//w9 com o indice em strtab que tem o nome
 		adr x22, strtab_content
 		add x22, x22, x9 //endereço da string 
+		mov x23, x22
 
-		mov x1, x22
-		mov x0, #1
-		bl print_string
-		adr x1, space
-		bl print_string
-		add x21, x21, #24 
-		sub x6, x6, #24
-		cmp x6, #0
-		b.le .error_test
-		b .loop_st_name_elf64_sym
+		//comparar com o next
+		adr x1, sym_I_want_to_modify
+		.loop_try_name_sym:
+			ldrb w7, [x23], #1
+			ldrb w8, [x1], #1
+			cmp x8, #0
+			b.eq .compare_name_with_0
+			cmp x7, x8
+			b.eq .loop_try_name_sym
+			b .not_the_same_sym
+
+			.compare_name_with_0:
+				cmp x7, #0
+				b.eq .sym_I_want_to_modify_finded
+
+		.not_the_same_sym:
+			add x21, x21, #24 
+			sub x6, x6, #24
+			cmp x6, #0
+			b.le .error
+			b .loop_st_name_elf64_sym
 
 
-	.error_test:
+	
+	.sym_I_want_to_modify_finded:
+	//x22 com o endereço da string do nome 
+	//x21 com o endereço na symtab do simbolo 
+
+
+	ldr x7, [x21, 0x08] //pegando st_value (ele é o endereço relativo da variavel a partir do base address)
+
+	adr x0, base_address_string
+	bl parse_int
+	//base address em inteiro no x0
+	add x0, x0, x7 //base address + st_value
+
+
+	//criar funções wrapper pros processos acima
+
+
+	
+	//proximos passos
+	// 1. abrir /proc/<pid>/mem  (você já sabe montar o path dinamicamente)
+	// 2. lseek(fd, endereço_final, SEEK_SET)  ← o endereço em x0
+	// 3. read(fd, buffer, 4)  ← lê 4 bytes (sizeof int)
+	// 4. o buffer agora contém o valor atual de `next`
+	
+	
+
+
+	bl print_int_d
 	bl print_buffer_flush
 	b .done_cheat
 
@@ -470,10 +510,11 @@ possible_wanted_name:
 
 
 base_address_string:
-	.zero 16
+    .ascii "0x"
+    .zero 16
 
 sym_I_want_to_modify:
-	.asciz "next\0"
+	.asciz "next"
 
 
 END:
