@@ -19,7 +19,7 @@
 // Never compute entry size manually — always use d_reclen to reach the next entry.
 //
 // @param x0 — file descriptor of an already-opened directory
-// @param path X1 — pointer to the struct where the kernel will write down
+// @param buffer X1 — pointer to the struct where the kernel will write down
 // @param flags X2 — x1 buffer size
 // @return x0 — number of bytes written into buffer (0 = end of directory, negative = error)
 .MACRO _getdents64

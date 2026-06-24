@@ -55,8 +55,10 @@ END_HEADER:
 .INCLUDE "SYS/exit.s"
 .INCLUDE "SYS/OPEN.S"
 .INCLUDE "SYS/getdents64.s"
+.INCLUDE "SYS/lseek.s"
 .INCLUDE "IO/read_chars.s"
 .INCLUDE "IO/print_chars.s"
+.INCLUDE "IO/print_string.s"
 .INCLUDE "IO/print_buffer_flush.s"
 
 .INCLUDE "IO/print_int_b.s"
@@ -99,14 +101,8 @@ START:
 	adr x2, wanted_name
 	bl get_pid
 	//x0 com o endereço da string do pid 
+	mov x21, x0 //salvando endereço do pid 
 
-
-
-	//PROXIMO PASSO DEPOIS DE ACHAR O PID
-	//ABRIR O MAPS DELE, ACHAR achar o '-' → separa start do end da linha, guardar o start
-	//achar os espaços até o path, ver se o último / do path tem o nome do processo
-	//Se tudo se confirmar teremos a base salva 
-	//se não tem, próxima linha, o loop volta quando acha \n
 
 	//endereço da string com nome do pid em x0
 
@@ -232,14 +228,194 @@ START:
 		.finded_name_in_maps:
 		//nome base_address_string só seguir daqui
 			mov x0, #1
-			adr x1, base_address_string
-			mov x2, x12
-			bl print_chars
-			bl print_buffer_flush
-			b .done_cheat
+			// adr x1, base_address_string
+			// mov x2, x12
+			// bl print_chars
+			// bl print_buffer_flush
+			// b .done_cheat
+
+		//fazer a função get base address com as coisas acima 
 
 
-	//fazer a função get base address
+
+		//Econtrando o offset da variável que eu quero 
+
+
+		// abrindo o proc/{pid}/exe
+		adr x8, exe_name_path
+		adr x9, proc_directory_with_slash
+		mov x10, #0
+		.loop_str_proc_for_exe:
+			ldrb w11, [x9], #1   // lê byte de x9, depois x9 += 1
+			strb w11, [x8], #1   // escreve byte em x8, depois x8 += 1
+			add x10, x10, #1
+			cmp x10, #6
+			b.ne .loop_str_proc_for_exe
+
+		adr x8, exe_name_path+6
+		mov x9, x21 //endereço da string do pid
+		mov x10, #0
+		.loop_pid_str_for_exe:
+			ldrb w11, [x9], #1   // lê byte de x9, depois x9 += 1
+			cmp x11, #0 //ve se ta escrevendo um monte de padding ou não 
+			b.eq .end_loop_pid_str_for_exe
+				strb w11, [x8], #1   // escreve byte em x8, depois x8 += 1
+				add x10, x10, #1
+				b .loop_pid_str_for_exe
+			.end_loop_pid_str_for_exe:
+		
+		adr x8, exe_name_path+6 
+		add x8, x8, x10
+		adr x9, exe_file
+		mov x10, #0
+		.loop_exe_file:
+			ldrb w11, [x9], #1
+			strb w11, [x8], #1
+			add x10, x10, #1
+			cmp x10, #4 //
+			b.ne .loop_exe_file
+
+	//read no proc/{pid}/exe 
+	mov x0, #-100
+	adr x1, exe_name_path
+	mov x2, #0x0 // O_RDONLY (0) 
+	mov x3, #0
+	_open
+
+	mov x15, x0 //fd in x15
+
+	cmp x0, #0
+	b.le .error
+
+	
+	//guardar um monte de bytes em um buffer
+	//fd in x0
+	adr x1, exe_file_content
+	mov x2, #4096
+	_read //len de bytes lidos em x0
+	cmp x0, #0
+	b.le .error
+
+	
+	ldr x3, [x1, 0x28] //pegando o e_shoff 
+	//x3 tem o offset até o section header table
+	ldrh w4, [x1, 0x3A] //e_shentsize (tamnho de cada seção)
+	ldrh w5, [x1, 0x3C] //e_shnum (numero de seções)
+
+	//fazer o lseek depois um novo read 
+	mov x0, x15
+	mov x1, x3
+	mov x2, #0
+	_lseek
+	//offset in x0
+	cmp x0, #0
+	b.le .error
+	// mov x1, x0
+	// mov x0, #1
+	// bl print_int_d
+	// bl print_buffer_flush
+	// b .done_cheat
+
+
+	mov x0, x15
+	adr x1, exe_file_content
+	mov x2, #4096
+	_read
+	cmp x0, #0
+	b.le .error
+
+// 	Próximo passo: — Iterar as entradas procurando sh_type == 2 (SHT_SYMTAB)
+	// Quando achar, guardar três campos dessa entrada:
+
+	// sh_offset (offset 0x18) — onde a .symtab começa no arquivo
+	// sh_size (offset 0x20) — tamanho total da .symtab em bytes
+	// sh_link (offset 0x28) — índice da seção .strtab associada 
+	
+	mov x12, x5 //numero de seções
+	//x4 tem o tamanho de cada seção
+	//x1 tem o endereço do conteúdo 
+	mov x13, x1
+	.loop_sh_type:
+		ldr w10, [x13, 0x04]
+		cmp w10, #2
+		b.eq .find_right_section_header
+		sub x12, x12, #1
+		cmp x12, #0
+		b.eq .error
+		add x13, x13, x4 //vai para a próxima seção 
+		b .loop_sh_type
+
+	.find_right_section_header:
+		//x1 com o endereço original, x13 com o endereço da seção 
+		ldr x3, [x13, 0x18] //sh_offset pegando onde.symtab começa no arquivo (8 bytes)
+		ldr x6, [x13, 0x20] //sh_size -> tamanho da .symtab (8 bytes)
+		ldr w5, [x13, 0x28] //sh_link da seção .strtab associada  (4 bytes)
+
+	//acessando sh_link 
+	mul x5, x5, x4 //multiplicando pelo tamanho da seção 
+	add x16, x1, x5 //section header de strtab
+	ldr x7, [x16, 0x18] //sh_offset pegando onde .strtab começa no arquivo
+	ldr x8, [x16, 0x20] //sh_size -> tamanho da .strtab
+
+	//lendo e guardando os dados de .strtab
+	mov x0, x15
+	mov x1, x7
+	mov x2, #0
+	_lseek
+	//offset in x0
+	cmp x0, #0
+	b.le .error
+
+	mov x0, x15
+	adr x1, strtab_content
+	mov x2, #2048
+	_read
+	cmp x0, #0
+	b.le .error
+
+
+
+	//novo lseek + read para pegar o offset para a .symtab
+	mov x0, x15
+	mov x1, x3
+	mov x2, #0
+	_lseek
+	//offset in x0
+	cmp x0, #0
+	b.le .error
+
+	mov x0, x15
+	adr x1, symtab_content
+	mov x2, #4096
+	_read
+	cmp x0, #0
+	b.le .error
+	
+
+	//ler cada Elf64_sym até achar o next (x6 tem o tamanho total)
+	adr x21, symtab_content
+	mov x11, #0
+	.loop_st_name_elf64_sym:
+		ldr w9, [x21, x11]
+		//w9 com o indice em strtab que tem o nome
+		adr x22, strtab_content
+		add x22, x22, x9 //endereço da string 
+
+		mov x1, x22
+		mov x0, #1
+		bl print_string
+		adr x1, space
+		bl print_string
+		add x21, x21, #24 
+		sub x6, x6, #24
+		cmp x6, #0
+		b.le .error_test
+		b .loop_st_name_elf64_sym
+
+
+	.error_test:
+	bl print_buffer_flush
+	b .done_cheat
 
 	
 .done_cheat:
@@ -268,17 +444,36 @@ maps_file:
 map_name_path:
 	.zero 32
 
+space:
+	.asciz " "
+
 maps_file_content:
 	.zero 4096
 
+exe_file:
+	.ascii "/exe"
+
+exe_name_path:
+	.zero 32
+
+exe_file_content:
+	.zero 4096
+
+symtab_content:
+	.zero 4096
+
+strtab_content:
+	.zero 2048
 
 possible_wanted_name:
-	.zero 64
+	.zero 32
 
 
 base_address_string:
 	.zero 16
 
+sym_I_want_to_modify:
+	.asciz "next\0"
 
 
 END:
@@ -290,19 +485,95 @@ PRINT_BUFFER:
 READ_BUFFER:
 
 
+//elfheader
+// typedef struct {
+//     unsigned char e_ident[16];  // offset 0x00 — magic number + metadados
+//     Elf64_Half    e_type;       // offset 0x10 (2 bytes)
+//     Elf64_Half    e_machine;    // offset 0x12 (2 bytes)
+//     Elf64_Word    e_version;    // offset 0x14 (4 bytes)
+//     Elf64_Addr    e_entry;      // offset 0x18 (8 bytes)
+//     Elf64_Off     e_phoff;      // offset 0x20 (8 bytes)
+//     Elf64_Off     e_shoff;      // offset 0x28 (8 bytes)  ← preciso
+//     Elf64_Word    e_flags;      // offset 0x30 (4 bytes)
+//     Elf64_Half    e_ehsize;     // offset 0x34 (2 bytes)
+//     Elf64_Half    e_phentsize;  // offset 0x36 (2 bytes)
+//     Elf64_Half    e_phnum;      // offset 0x38 (2 bytes)
+//     Elf64_Half    e_shentsize;  // offset 0x3A (2 bytes)  ← preciso
+//     Elf64_Half    e_shnum;      // offset 0x3C (2 bytes)  ← preciso
+//     Elf64_Half    e_shstrndx;   // offset 0x3E (2 bytes)
+// } Elf64_Ehdr;                   // total: 0x40 = 64 bytes
+// 0x7f 0x45 0x4c 0x46 0x2 0x1 0x1 0x0
+// 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0
+// 0x3 0x0 0x3e 0x0 0x1 0x0 0x0 0x0
+// 0xa0 0x14 0x0 0x0 0x0 0x0 0x0 0x0
+// 0x40 0x0 0x0 0x0 0x0 0x0 0x0 0x0
+// 0xe0 0x53 0x1 0x0 0x0 0x0 0x0 0x0
+// 0x0 0x0 0x0 0x0 0x40 0x0 0x38 0x0
+// 0xd 0x0 0x40 0x0 0x26 0x0 0x25 0x0
+// offset  bytes                          campo
+// 0x00    7f 45 4c 46                    e_ident[0..4)   = magic "\x7fELF"
+// 0x04    02                             e_ident[4]      = EI_CLASS = 2 (64-bit)
+// 0x05    01                             e_ident[5]      = EI_DATA = 1 (little-endian)
+// 0x06    01                             e_ident[6]      = EI_VERSION = 1
+// 0x07    00                             e_ident[7]      = EI_OSABI = 0
+// 0x08-0x0F  00 00 00 00 00 00 00 00     e_ident[8..16)  = padding
+// 0x10    03 00                          e_type    = 0x0003 = ET_DYN  ← PIE 
+// 0x12    3e 00                          e_machine = 0x003e = 62 (EM_X86_64)
+// 0x14    01 00 00 00                    e_version = 1
+// 0x18    a0 14 00 00 00 00 00 00        e_entry   = 0x14a0
+// 0x20    40 00 00 00 00 00 00 00        e_phoff   = 0x40
+// 0x28    e0 53 01 00 00 00 00 00        e_shoff   = 0x153e0
+// 0x30    00 00 00 00                    e_flags   = 0
+// 0x34    40 00                          e_ehsize  = 0x40 = 64
+// 0x36    38 00                          e_phentsize = 0x38 = 56
+// 0x38    0d 00                          e_phnum   = 13
+// 0x3a    40 00                          e_shentsize = 0x40 = 64
+// 0x3c    26 00                          e_shnum   = 38
+// 0x3e    25 00                          e_shstrndx  = 37
 
-//  0x8382: 0x1 0x0 0x0 0x0 0x0 0x0 0x0 0x0                                                                                                                
-//   0x838a: 0x1 0x0 0x0 0x0 0x0 0x0 0x0 0x0                                                                                                                
-//   0x8392: 0x18 0x0 0x4 0x2e 0x0 0x0 0x0 0x0                                                                                                              
-//   0x839a: 0x1 0x0 0x0 0x0 0x0 0x0 0x0 0x0                                                                                                                
-//   0x83a2: 0x2 0x0 0x0 0x0 0x0 0x0 0x0 0x0                                                                                                                
-//   0x83aa: 0x18 0x0 0x4 0x2e 0x2e 0x0 0x0 0x0                                                                                                             
-//   0x83b2: 0x9e 0x0 0x0 0xf0 0x0 0x0 0x0 0x0                                                                                                              
-//   0x83ba: 0x3 0x0 0x0 0x0 0x0 0x0 0x0 0x0                                                                                                                
-//   0x83c2: 0x18 0x0 0x8 0x66 0x62 0x0 0x0 0x0                                                                                                             
-//   0x83ca: 0x7 0x0 0x0 0xf0 0x0 0x0 0x0 0x0                                                                                                               
-//   0x83d2: 0x4 0x0 0x0 0x0 0x0 0x0 0x0 0x0                                                                                                                
-//   0x83da: 0x18 0x0 0x4 0x66 0x73 0x0 0x0 0x0 
+//e_shoff → endereço (offset no arquivo) onde a Section Header Table começa
+//e_shentsize → tamanho em bytes de cada entrada da Section Header Table 
+//e_shnum → quantas entradas (seções) existem na Section Header Table
+
+
+
+
+//section header: (é o header com as informações da section (exemplo .text))
+
+// typedef struct {
+//     Elf64_Word  sh_name;       // offset 0x00 (4 bytes) — índice na .shstrtab
+//     Elf64_Word  sh_type;       // offset 0x04 (4 bytes) — tipo da seção
+//     Elf64_Xword sh_flags;      // offset 0x08 (8 bytes)
+//     Elf64_Addr  sh_addr;       // offset 0x10 (8 bytes)
+//     Elf64_Off   sh_offset;     // offset 0x18 (8 bytes)  ← offset da seção no arquivo
+//     Elf64_Xword sh_size;       // offset 0x20 (8 bytes)  ← tamanho da seção em bytes
+//     Elf64_Word  sh_link;       // offset 0x28 (4 bytes)  ← índice de outra seção relacionada
+//     Elf64_Word  sh_info;       // offset 0x2C (4 bytes)
+//     Elf64_Xword sh_addralign;  // offset 0x30 (8 bytes)
+//     Elf64_Xword sh_entsize;    // offset 0x38 (8 bytes)  ← se entradas têm tamanho fixo, qual é
+// } Elf64_Shdr;                  // total: 0x40 = 64 bytes
+// 0x1b 0x0 0x0 0x0 0x1 0x0 0x0 0x0
+// 0x2 0x0 0x0 0x0 0x0 0x0 0x0 0x0
+// 0x18 0x3 0x0 0x0 0x0 0x0 0x0 0x0
+// 0x18 0x3 0x0 0x0 0x0 0x0 0x0 0x0
+// 0x1c 0x0 0x0 0x0 0x0 0x0 0x0 0x0
+// 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0
+// 0x1 0x0 0x0 0x0 0x0 0x0 0x0 0x0
+// 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0
+
+
+//.symtab item struct:
+// typedef struct {
+//     Elf64_Word  st_name;   // 0x00, 4 bytes — índice na .strtab onde começa o nome
+//     uint8_t     st_info;   // 0x04, 1 byte  — tipo e binding do símbolo
+//     uint8_t     st_other;  // 0x05, 1 byte  — visibilidade (geralmente 0)
+//     Elf64_Half  st_shndx;  // 0x06, 2 bytes — índice da seção onde o símbolo vive
+//     Elf64_Addr  st_value;  // 0x08, 8 bytes — offset/endereço
+//     Elf64_Xword st_size;   // 0x10, 8 bytes — tamanho em bytes do símbolo
+// } Elf64_Sym;               // total: 24 bytes (0x18)
+// 0x9 0x0 0x0 0x0 0x1 0x0 0x4 0x0
+// 0x8c 0x3 0x0 0x0 0x0 0x0 0x0 0x0
+// 0x20 0x0 0x0 0x0 0x0 0x0 0x0 0x0
 
 
 //debug
@@ -316,7 +587,7 @@ READ_BUFFER:
 // adr x1
 //  mov x2, #len
 // 	mov x0, #1
-// 	bl print_chars
+//	bl print_chars
 // 	bl print_buffer_flush
 // 	b .done_cheat
 
