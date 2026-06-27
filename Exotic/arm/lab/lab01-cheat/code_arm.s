@@ -50,10 +50,13 @@ END_HEADER:
 //.EQU VERBOSE_LOGS, 1
 
 .EQU BUFFER_SIZE_GETDENTS, 4096
+.EQU SYMBOL_BYTES, 4
 
 .INCLUDE "SYS/LINUX/SYSCALLS.S"
 .INCLUDE "SYS/exit.s"
 .INCLUDE "SYS/OPEN.S"
+.INCLUDE "SYS/WRITE.S"
+.INCLUDE "SYS/sleep.s"
 .INCLUDE "SYS/getdents64.s"
 .INCLUDE "SYS/lseek.s"
 .INCLUDE "IO/read_chars.s"
@@ -147,7 +150,7 @@ START:
 	mov x2, #0x0 // O_RDONLY (0) 
 	mov x3, #0
 	_open
-	mov x9, x0//guardar o fd de proc 
+	mov x9, x0//guardar o fd de proc/pid/maps
 
 	cmp x0, #0
 	b.le .error
@@ -394,10 +397,10 @@ START:
 	
 
 	//ler cada Elf64_sym até achar o next (x6 tem o tamanho total)
-	adr x21, symtab_content
+	adr x24, symtab_content
 	mov x11, #0
 	.loop_st_name_elf64_sym:
-		ldr w9, [x21, x11]
+		ldr w9, [x24, x11]
 		//w9 com o indice em strtab que tem o nome
 		adr x22, strtab_content
 		add x22, x22, x9 //endereço da string 
@@ -419,7 +422,7 @@ START:
 				b.eq .sym_I_want_to_modify_finded
 
 		.not_the_same_sym:
-			add x21, x21, #24 
+			add x24, x24, #24 
 			sub x6, x6, #24
 			cmp x6, #0
 			b.le .error
@@ -429,15 +432,17 @@ START:
 	
 	.sym_I_want_to_modify_finded:
 	//x22 com o endereço da string do nome 
-	//x21 com o endereço na symtab do simbolo 
+	//x24 com o endereço na symtab do simbolo 
 
 
-	ldr x7, [x21, 0x08] //pegando st_value (ele é o endereço relativo da variavel a partir do base address)
+	ldr x7, [x24, 0x08] //pegando st_value (ele é o endereço relativo da variavel a partir do base address)
 
 	adr x0, base_address_string
 	bl parse_int
 	//base address em inteiro no x0
 	add x0, x0, x7 //base address + st_value
+	mov x25, x0 
+
 
 
 	//criar funções wrapper pros processos acima
@@ -445,17 +450,95 @@ START:
 
 	
 	//proximos passos
-	// 1. abrir /proc/<pid>/mem  (você já sabe montar o path dinamicamente)
+	// 1. abrir /proc/<pid>/mem 
 	// 2. lseek(fd, endereço_final, SEEK_SET)  ← o endereço em x0
 	// 3. read(fd, buffer, 4)  ← lê 4 bytes (sizeof int)
 	// 4. o buffer agora contém o valor atual de `next`
+	//abrindo /proc/{pid}/maps
+	adr x8, mem_name_path
+	adr x9, proc_directory_with_slash
+	mov x10, #0
+	.loop_str_proc_for_mem:
+		ldrb w11, [x9], #1   // lê byte de x9, depois x9 += 1
+		strb w11, [x8], #1   // escreve byte em x8, depois x8 += 1
+		add x10, x10, #1
+		cmp x10, #6
+		b.ne .loop_str_proc_for_mem
+
+	adr x8, mem_name_path+6
+	mov x9, x21 //endereço da string do pid
+	mov x10, #0
+	.loop_pid_str_for_mem:
+		ldrb w11, [x9], #1   // lê byte de x9, depois x9 += 1
+		cmp x11, #0 //ve se ta escrevendo um monte de padding ou não 
+		b.eq .end_loop_pid_str_for_mem
+			strb w11, [x8], #1   // escreve byte em x8, depois x8 += 1
+			add x10, x10, #1
+			b .loop_pid_str_for_mem
+		.end_loop_pid_str_for_mem:
 	
-	
+	adr x8, mem_name_path+6 
+	add x8, x8, x10
+	adr x9, mem_file
+	mov x10, #0
+	.loop_mem_file:
+		ldrb w11, [x9], #1
+		strb w11, [x8], #1
+		add x10, x10, #1
+		cmp x10, #4
+		b.ne .loop_mem_file
 
 
-	bl print_int_d
-	bl print_buffer_flush
-	b .done_cheat
+	mov x0, #-100
+	adr x1, mem_name_path
+	mov x2, #0x2 // O_RDWR  
+	mov x3, #0
+	_open
+	mov x9, x0//guardar o fd de proc 
+
+	
+	.loop_new_value:
+		mov x0, x9 //fd
+		mov x1, x25 //offset
+		mov x2, #0
+		_lseek
+		//offset in x0
+		cmp x0, #0
+		b.le .error
+
+		//escrita
+		mov x0, x9 //fd
+		adr x1, new_value
+		mov x2, SYMBOL_BYTES
+		_write
+
+		mov x0, x9 //fd
+		mov x1, x25 //offset
+		mov x2, #0
+		_lseek
+
+
+		mov x0, x9 //fd
+		adr x1, value_symbol
+		mov x2, SYMBOL_BYTES
+		_read
+
+		mov x0, #1
+		ldr w1, [x1] //carregando o que está em value_symbol 
+		bl print_int_d
+		bl print_buffer_flush
+
+		adr x0, sleep_time
+		mov x1, #0
+		_sleep
+	
+		b .loop_new_value
+		
+	// mov x0, #1
+	// ldr w1, [x1] //carregando o que está em value_symbol 
+	// bl print_int_d
+	// bl print_buffer_flush
+	// b .done_cheat
 
 	
 .done_cheat:
@@ -483,6 +566,15 @@ maps_file:
 
 map_name_path:
 	.zero 32
+
+mem_name_path:
+	.zero 32
+
+mem_file:
+	.ascii "/mem"
+
+new_value:
+	.word 0 //zero é a linha reta,
 
 space:
 	.asciz " "
@@ -515,6 +607,14 @@ base_address_string:
 
 sym_I_want_to_modify:
 	.asciz "next"
+
+value_symbol:
+	.zero SYMBOL_BYTES
+
+sleep_time:
+	.quad 2 // tv_sec
+	.quad 0// tv_nsec 
+ 
 
 
 END:
