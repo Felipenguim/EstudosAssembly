@@ -534,11 +534,7 @@ START:
 	
 		b .loop_new_value
 		
-	// mov x0, #1
-	// ldr w1, [x1] //carregando o que está em value_symbol 
-	// bl print_int_d
-	// bl print_buffer_flush
-	// b .done_cheat
+
 
 	
 .done_cheat:
@@ -612,7 +608,7 @@ value_symbol:
 	.zero SYMBOL_BYTES
 
 sleep_time:
-	.quad 2 // tv_sec
+	.quad 1 // tv_sec
 	.quad 0// tv_nsec 
  
 
