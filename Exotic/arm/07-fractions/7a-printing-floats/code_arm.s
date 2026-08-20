@@ -53,14 +53,9 @@ END_HEADER:
 .INCLUDE "SYS/exit.s"
 
 .INCLUDE "IO/print_chars.s"
-.INCLUDE "IO/print_memory.s"
-.INCLUDE "IO/print_stack.s"
+.INCLUDE "IO/print_float.s"
 .INCLUDE "IO/print_buffer_flush.s"
 
-.INCLUDE "IO/print_int_b.s"
-.INCLUDE "IO/print_int_o.s"
-.INCLUDE "IO/print_int_h.s"
-.INCLUDE "IO/print_int_d.s"
 
 //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;INSTRUCTIONS;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -69,34 +64,49 @@ END_HEADER:
 START:
 
 	
+	ldr  d0, x
+    mov  x0, #1
+    mov  x1, #9
+    bl   print_float
+    mov  x0, #1
+    adr  x1, grammar+1
+    mov  x2, #1
+    bl   print_chars
+
+	//+0.0
+	fmov d0, xzr //gera 0.0
+	mov x0, #1
+	mov x1, #1
+	bl print_float
+
 
 	mov x0, #1
-	mov x1, #1 //indexado em 0, se x1 = 1 printa sp+8 e sp+0
-	adr x2, print_int_d
-	mov x9, #777
-	mov x10, #67
-	stp x9, x10, [sp, #-16]!
-	bl print_stack
-	ldp x9, x10, [sp], #16
-	
+	adr x1, grammar	
+	mov x2, #1
+	bl print_chars
 
-	mov x0, #1
-	adr x1, ARRAY
-	adr x2, print_int_h
-	mov x3, 15*8
-	bl print_memory
 
+	//bl print_chars
 	bl print_buffer_flush
-
 	mov x0, #0 // exit code 0
 	_exit
 
 
-ARRAY:
-    .quad 11845, 2, 3, 4, 58412416532157
-	.quad 6, 7, 8, 9, -10
-	.quad 11, 12, 11845452, 14, -15
+x:
+	.double 12345.6789
+y:
+	.double 1000.0		//this is why we have lookup tables
+inf:
+	.quad 0x7FF0000000000000 // +Inf
+.neg_inf:
+	.quad 0xFFF0000000000000 // -Inf
+zero:
+	.double 0.0
+.neg_zero:
+	.double -0.0
 
+grammar:
+	.ascii " \n"
 
 
 END:
