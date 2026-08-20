@@ -59,8 +59,8 @@ log_e:
     fmov  d3, #1.0 
     fsub d4, d4, d3 //expansion around ln(1+x), so adjust into the range
     fneg d3, d4 //d3=-x, multiplier between each term
-    mov x2, 1 //tracks integer denominator, k
-    fmov  d0, #0.0 //tracks the running sum of terms
+    mov x2, #1 //tracks integer denominator, k
+    movi d0, #0 //tracks the running sum of terms
 
 .taylor_series_loop:
     scvtf d5, x2 //converte k para double

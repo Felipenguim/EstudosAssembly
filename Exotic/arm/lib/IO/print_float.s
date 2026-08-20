@@ -16,10 +16,14 @@ print_float:
     str d3, [sp, #-16]!
     stp x2, x3, [sp, #-16]!
     stp x4, x5, [sp, #-16]!
+    stp x6, x7, [sp, #-16]!
+    stp x8, x9, [sp, #-16]!
+    stp x10, x11, [sp, #-16]!
+    stp x12, x13, [sp, #-16]!
     mov x29, sp 
 
-    sub sp, sp, #16 // para guardar o valor final
-    add x8, sp, #16 // x8 no fim do buffer 
+    sub sp, sp, #64 // para guardar o valor final
+    add x8, sp, #64 // x8 no fim do buffer 
 
     fmov x2, d0
 
@@ -45,7 +49,7 @@ print_float:
     
     and x2, x2, x3
     cmp x2, x3
-    b.eq .ret_NaN
+    b.eq .ret_NaN_print_float
 
     //saving value in d2
     fmov d2, d0
@@ -62,8 +66,7 @@ print_float:
     fabs d0, d0 // |d0|
 
     mov x2, #10
-    
-    scvtf d3, x2 
+    scvtf d3, x2 //radix for decimal in d3
 
     mov x2, x4
     add x2, x2, #1 // x2 = exponent+1
@@ -72,18 +75,44 @@ print_float:
     b.ge .huge_number //more digits to left of decimal than sig figs,
 				      //so we need to pad extra zeros to the right
 
-    cmp x2, 0 // número inteiro a direita do decimal 
+    cmp x2, #0 // número inteiro a direita do decimal 
     b.le .small_number // 0. ...
 
 .medium_number: //caso normal, nenhum dos dois acima
-
+    mov x9, x1 
+    sub x9, x9, x2 // x9 = digits to right of the decimal
 .medium_number_shift_loop:
+    fmul d0, d0, d3 //d0 *10 até não ser mais decimal
+    sub x9, x9, #1 
+    cbnz x9, .medium_number_shift_loop
 
 .medium_number_shifted:
-
+    mov x9, x1
+    sub x9, x9, x2 // x9 = digits to right of the decimal
+    fcvtzs x2, d0 //round para o inteiro mais proximo
+    mov x10, #10 
 .medium_number_print_loop:
+    udiv x11, x2, x10 //x11 quociente
+    msub x12, x11, x10, x2// x12 = resto = x2 - x11*10 (o dígito)
+    add w12, w12, #48 //ASCII
+    sub x9, x9, #1 
+    sub x8, x8, #1 //ponteiro do buffer na pilha menos 1 
+    strb w12, [x8]
+    mov x2, x11 //atualizando para proxima chamada
+    cbnz x9, .medium_number_not_decimal_point
+    sub  x8, x8, #1
+    mov  w13, #46                  // '.'
+    strb w13, [x8]
 
 .medium_number_not_decimal_point:
+    cbnz x2, .medium_number_print_loop //volta pro loop se não zerou ainda
+    //d2 com valor original
+    fcmp d2, #0.0
+    b.gt .write_print_float
+    sub  x8, x8, #1
+    mov  w13, #46                  // '-'
+    strb w13, [x8]
+    b.gt .write_print_float
 
 .small_number_shift_loop:
 
@@ -105,8 +134,14 @@ print_float:
 .huge_number_print_loop:
 
 .write_print_float:
-    
-    b done_print_float
+    //x0 com fd
+    mov x1, x8
+    mov x4, sp
+    sub x2, x8, x4
+    mov x4, #64 //valor usado
+    sub x2, x4, x2 //x2 com a vendeira len
+    bl print_chars
+    b .done_print_float
 
 .ret_pos_zero:
     sub x5, x8, #4
@@ -119,7 +154,7 @@ print_float:
     strb w7, [x6, #1]
     mov w7, #43 //+
     strb w7, [x6, #0]
-    
+    mov x8, x6
     b .write_print_float
 
 .ret_neg_zero:
@@ -134,6 +169,7 @@ print_float:
     mov w7, #45 //-
     strb w7, [x6, #0]
     
+    mov x8, x6
     b .write_print_float
 
 
@@ -148,7 +184,7 @@ print_float:
     strb w7, [x6, #1]
     mov w7, #43 //+
     strb w7, [x6, #0]
-    
+    mov x8, x6
     b .write_print_float
 
 .ret_neg_inf:
@@ -162,7 +198,7 @@ print_float:
     strb w7, [x6, #1]
     mov w7, #45 //-
     strb w7, [x6, #0]
-    
+    mov x8, x6
     b .write_print_float
 
 
@@ -176,12 +212,16 @@ print_float:
     strb w7, [x6, #1]
     mov w7, #78 //N
     strb w7, [x6, #0]
-    
+    mov x8, x6
     b .write_print_float
 
 .done_print_float:
-    add sp, sp #16
+    add sp, sp, #64
     mov sp, x29 
+    ldp x12, x13, [sp], #16
+    ldp x10, x11, [sp], #16
+    ldp x8, x9, [sp], #16
+    ldp x6, x7, [sp], #16
     ldp x4, x5, [sp], #16
     ldp x2, x3, [sp], #16
     ldr d3, [sp], #16

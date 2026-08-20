@@ -23,7 +23,7 @@ log10:
     mov x29, sp 
 
     //if x<=0 return NaN
-    adr x0, lookup_table
+    adr x1, lookup_table
     ldr d1, [x1]
     fcmp d0, d1
     b.le .ret_NaN_log_10
@@ -33,12 +33,12 @@ log10:
 
 .bisection_loop:
     mov x2, x0 //pegando a lower bound
-    add x2, x2, x1 // add upper bound
+    add x2, x2, x4 // add upper bound
     lsr x2, x2, #1 // x2 / 2 
     cmp x2, x0
     b.eq .converged
     adr x1, lookup_table
-    ldr d3, [x1, lsl x0, x0, #3] //offset = x0*8
+    ldr d3, [x1, x2, lsl #3] //offset = x2*8
     fcmp d0, d3
     b.gt .shrink_up
     b.lt .shrink_down
@@ -46,7 +46,7 @@ log10:
 .converged:
     //justo 2 options
     adr x1, lookup_table
-    ldr d3, [x1, lsl x0, x0, #3] //offset = x0*8
+    ldr d3, [x1, x0, lsl #3] //offset = x0*8
     fcmp d0, d3
     b.ne .not_x0
     sub x0, x0, #324
@@ -55,11 +55,11 @@ log10:
 
 .not_x0:
     adr x1, lookup_table
-    ldr d3, [x1, lsl x0, x0, #3] //offset = x0*8
+    ldr d3, [x1, x4, lsl #3] //offset = x4*8
     fcmp d0, d3
     b.ne .not_found_log10
-    sub x0, x0, #324
-    scvtf d0, x0
+    sub x4, x4, #324
+    scvtf d0, x4
     b .leave_pre_cond_log10
 
 .shrink_up:
@@ -78,7 +78,7 @@ log10:
     b .leave_pre_cond_log10
 
 .ret_NaN_log_10:
-    adr x1, NaN
+    adr x1, NaN_log_10
     ldr d0, [x1]
     b .leave_pre_cond_log10
 
@@ -96,7 +96,7 @@ ln_ten_inv:
     .quad 0x3fdbcb7b1526e50d //1/ln(10)
 
 
-NaN:
+NaN_log_10:
 	.quad 0x7FF0000000000001
 
 lookup_table:
