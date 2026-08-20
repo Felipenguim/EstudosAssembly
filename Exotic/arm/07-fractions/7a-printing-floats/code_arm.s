@@ -66,7 +66,7 @@ START:
 	
 	ldr  d0, x
     mov  x0, #1
-    mov  x1, #9
+    mov  x1, #13
     bl   print_float
     mov  x0, #1
     adr  x1, grammar+1
@@ -78,12 +78,76 @@ START:
 	mov x0, #1
 	mov x1, #1
 	bl print_float
-
-
 	mov x0, #1
-	adr x1, grammar	
+	adr x1, grammar+1
 	mov x2, #1
 	bl print_chars
+
+	//-0.0
+	ldr  d0, .neg_zero
+    mov  x0, #1
+    mov  x1, #1
+    bl   print_float
+    mov  x0, #1
+    adr  x1, grammar+1
+    mov  x2, #1
+    bl   print_chars
+
+	//-inf
+	ldr  d0, .neg_inf
+    mov  x0, #1
+    mov  x1, #1
+    bl   print_float
+    mov  x0, #1
+    adr  x1, grammar+1
+    mov  x2, #1
+    bl   print_chars
+
+	ldr  d0, inf
+    mov  x0, #1
+    mov  x1, #1
+    bl   print_float
+    mov  x0, #1
+    adr  x1, grammar+1
+    mov  x2, #1
+    bl   print_chars
+
+	fmov d0, xzr //gera 0.0
+	fdiv d0, d0, d0
+	mov x0, #1
+	mov x1, #1
+	bl print_float
+	mov x0, #1
+	adr x1, grammar+1
+	mov x2, #1
+	bl print_chars
+
+	ldr  d0, y
+    mov  x0, #1
+    mov  x1, #7
+    bl   print_float
+    mov  x0, #1
+    adr  x1, grammar+1
+    mov  x2, #1
+    bl   print_chars
+
+	ldr  d0, x
+    mov  x0, #1
+    mov  x1, #4
+    bl   print_float
+	mov  x0, #1
+    adr  x1, grammar+1
+    mov  x2, #1
+    bl   print_chars
+
+	ldr  d0, z
+    mov  x0, #1
+    mov  x1, #7
+    bl   print_float
+    mov  x0, #1
+    adr  x1, grammar+1
+    mov  x2, #1
+    bl   print_chars
 
 
 	//bl print_chars
@@ -93,15 +157,16 @@ START:
 
 
 x:
-	.double 12345.6789
+	.double 1225.678914
+z:
+	.double 0.678914
 y:
 	.double 1000.0		//this is why we have lookup tables
 inf:
 	.quad 0x7FF0000000000000 // +Inf
 .neg_inf:
 	.quad 0xFFF0000000000000 // -Inf
-zero:
-	.double 0.0
+
 .neg_zero:
 	.double -0.0
 

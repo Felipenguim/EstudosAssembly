@@ -110,28 +110,86 @@ print_float:
     fcmp d2, #0.0
     b.gt .write_print_float
     sub  x8, x8, #1
-    mov  w13, #46                  // '-'
+    mov  w13, #45                  // '-'
     strb w13, [x8]
-    b.gt .write_print_float
-
-.small_number_shift_loop:
-
-.small_number_shifted:
-
-.small_number_print_loop:
-
-.small_number_zeros_loop:
+    b .write_print_float
 
 .small_number:
+    mov x9,x2	//{x9}=zeros between decimal and number
+	neg x9, x9
+	add x1, x1, x9
+
+.small_number_shift_loop:
+    fmul d0, d0, d3 //d0 *10 até não ser mais decimal       
+    sub x1, x1, #1
+	cbnz x1, .small_number_shift_loop
+
+.small_number_shifted:
+    fcvtzs x2, d0 //round para o inteiro mais proximo
+    mov x10, #10 
+
+.small_number_print_loop:
+    udiv x11, x2, x10 //x11 quociente
+    msub x12, x11, x10, x2// x12 = resto = x2 - x11*10 (o dígito)
+    add w12, w12, #48 //ASCII
+    sub x8, x8, #1 //ponteiro do buffer na pilha menos 1 
+    strb w12, [x8]
+    mov x2, x11
+    cbnz x2, .small_number_print_loop
+    cbz x9, .small_number_no_zeros
+
+.small_number_zeros_loop:
+    sub x8, x8, #1
+    mov  w13, #48                  // '0'
+    strb w13, [x8]
+    sub x9, x9, #1
+    cbnz x9, .small_number_zeros_loop
 
 .small_number_no_zeros:
-
+    sub x8, x8, #1
+    mov  w13, #46                  // '.'
+    strb w13, [x8]
+    sub x8, x8, #1
+    mov  w13, #48                 // '0'
+    strb w13, [x8]
+    fcmp d2, #0.0
+    b.gt .write_print_float
+    sub  x8, x8, #1
+    mov  w13, #45                  // '-'
+    strb w13, [x8]
+    b .write_print_float
 
 .huge_number:
+    mov x9,x2
+    sub x9, x9, x1
+    fcvtzs x2, d0 //round para o inteiro mais proximo
+    mov x10, #10
+    cbz x9, .huge_number_print_loop
 
 .huge_number_zeros_loop:
+    udiv x11, x2, x10 //x11 quociente
+    msub x12, x11, x10, x2// x12 = resto = x2 - x11*10 (o dígito)
+    sub x8, x8, #1 //ponteiro do buffer na pilha menos 1 
+    mov  w13, #48                 // '0'
+    strb w13, [x8]
+    mov x2, x11
+    sub x9, x9, #1
+    cbnz x9, .huge_number_zeros_loop
 
 .huge_number_print_loop:
+    udiv x11, x2, x10 //x11 quociente
+    msub x12, x11, x10, x2// x12 = resto = x2 - x11*10 (o dígito)
+    add w12, w12, #48 //ASCII
+    sub x8, x8, #1 //ponteiro do buffer na pilha menos 1 
+    strb w12, [x8]
+    mov x2, x11
+    cbnz x2, .huge_number_print_loop
+    fcmp d2, #0.0
+    b.gt .write_print_float
+    sub  x8, x8, #1
+    mov  w13, #45                  // '-'
+    strb w13, [x8]
+    //vai direto pro print
 
 .write_print_float:
     //x0 com fd
