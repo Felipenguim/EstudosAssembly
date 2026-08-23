@@ -71,7 +71,7 @@ START:
 	movz x1, #0x86A0
 	movk x1, #0x1, lsl #16
 	//demontando 100000 em hexadecimal pra colocar no em x1
-
+	
 	bl rand_int
 
 

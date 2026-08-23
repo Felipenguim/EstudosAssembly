@@ -55,29 +55,36 @@ END_HEADER:
 .INCLUDE "IO/print_chars.s"
 .INCLUDE "IO/print_float.s"
 .INCLUDE "IO/print_buffer_flush.s"
-
+.INCLUDE "IO/print_int_arrays.s"
 .INCLUDE "IO/print_int_d.s"
 
-.INCLUDE "math/rand/rand_int.s"
+.INCLUDE "math/rand/rand_int_array.s"
 
-
+.equ LEN_ARR, 0x10
 //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;INSTRUCTIONS;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 START:
 
-	mov x0, #0
-	movz x1, #0x86A0
-	movk x1, #0x1, lsl #16
-	//demontando 100000 em hexadecimal pra colocar no em x1
+	mov x3, #0
+	// movz x4, #0x86A0
+	// movk x4, #0x1, lsl #16
+	mov x4, #100
+	adr x0, array
+	mov x1, #0
+	mov x2, LEN_ARR
 
-	bl rand_int
+	bl rand_int_array
 
 
-	mov x1, x0 //value
+	mov x1, x0 //address
 	mov x0, #1 //stdout
-	bl print_int_d
+	mov x2, LEN_ARR
+	mov x3, #1
+	mov x4, #0
+	adr x5, print_int_d
+	bl print_array_int
 	
 	mov x0, #1 
 	adr x1, NEWLINE 
@@ -91,6 +98,11 @@ START:
 
 NEWLINE:
 	.byte 0x0A
+
+array:
+	.rept LEN_ARR
+	.quad 0
+	.endr
 
 
 END:

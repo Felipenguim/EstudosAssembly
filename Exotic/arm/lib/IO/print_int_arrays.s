@@ -9,7 +9,6 @@
 
 // void print_array_int(int {fd}, int* {array}, int {num_rows}, int {num_cols}, int{offset between cols and rows} void* {print_function}  )
 //Prints out integer array values to file descriptor  using the print function pointer
-
 // @param fd [x0] — file descriptor to write to (e.g. 1 for stdout, 2 for stderr)
 // @param fd [x1] - adress of the first element of the array (pointer to int)
 // @param num_rows [x2] - number of rows in the array
@@ -74,7 +73,7 @@ print_array_int:
 
     add x7, x7, x4 //avança para a próxima linha
 
-    cmp x8, 1 //se for a última linha
+    cmp x8, #1 //se for a última linha
     b.le .done
 
     //print `;\n`
