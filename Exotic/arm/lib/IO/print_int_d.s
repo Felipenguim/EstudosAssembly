@@ -3,10 +3,10 @@
 
 .INCLUDE "IO/print_chars.s"
 
-// void print_int_b(int {fd}, int {num})
-// Writes binary representation of {num} to file descriptor {fd} (e.g. 1 for stdout, 2 for stderr).
+// void print_int_d(int {fd}, int {num})
+// Writes decimal representation of {num} to file descriptor {fd} (e.g. 1 for stdout, 2 for stderr).
 // @param fd X0 — file descriptor to write to (e.g. 1 for stdout, 2 for stderr)
-// @param num X1 — binary value to write
+// @param num X1 — decimal value to write
 print_int_d:
     stp  x29, x30, [sp, #-16]!
     stp x2, x3, [sp, #-16]!
