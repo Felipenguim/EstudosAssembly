@@ -54,6 +54,9 @@ END_HEADER:
 .INCLUDE "SYS/socket.s"
 .INCLUDE "SYS/connect.s"
 .INCLUDE "SYS/close.s"
+.INCLUDE "SYS/WRITE.s"
+.INCLUDE "SYS/sleep.s"
+.INCLUDE "SYS/READ.s"
 
 .INCLUDE "IO/print_chars.s"
 .INCLUDE "IO/print_float.s"
@@ -62,7 +65,6 @@ END_HEADER:
 .INCLUDE "IO/print_int_arrays.s"
 .INCLUDE "IO/print_int_h.s"
 
-.equ LEN_ARR, 0x10
 //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;INSTRUCTIONS;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -103,6 +105,35 @@ START:
 	cmp x0, #0
 	b.lt .connect_err
 	
+	mov x0, x19
+	adr x1, http_string
+	mov x2, HTTP_LEN
+	_write
+
+
+	// adr x0, sleep_time
+	// mov x1, #0
+	// _sleep
+	//FAZER UM LOOP ATÉ READ RETORNAR 0 EM x0 
+	mov x0, x19
+	adr x1, resp_header_buffer
+	mov x2, #512
+	_read
+
+	mov x0, #1
+	adr x1, resp_header_buffer
+	mov x2, #512
+	bl print_chars
+
+	mov x0, x19
+	adr x1, resp_buffer
+	mov x2, #512
+	_read
+
+	mov x0, #1
+	adr x1, resp_buffer
+	mov x2, #512
+	bl print_chars
 
 	mov x0, x19
 	_close
@@ -139,8 +170,31 @@ sockaddr_in:
 // 	.rept LEN_ARR
 // 	.quad 0
 // 	.endr
+
+sleep_time:
+	.quad 3 // tv_sec
+	.quad 0// tv_nsec 
+
+resp_header_buffer:
+	.zero 512
+resp_buffer:
+	.zero 512
+
 err_connect_string:
 	.asciz "Error in connect \n"
+
+http_string:
+	.ascii "POST / HTTP/1.1\r\n"
+	.ascii "Host: 127.0.0.1:8000\r\n"
+	.ascii "Content-Type: text/plain\r\n"
+	.ascii "Content-Length: 4\r\n"
+	.ascii "\r\n"
+body:
+	.ascii "pang"
+
+END_http_string:
+
+.equ HTTP_LEN, END - http_string
 
 END:
 

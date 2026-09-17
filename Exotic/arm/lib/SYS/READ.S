@@ -1,117 +1,19 @@
 .IFNDEF READ
 .EQU READ,1
 
-.INCLUDE "SYS/HELPER.S"
-
 ///////////////////////////////////////////////////////////////////////////////
 
-// ssize_t __READ()
-// Internal helper — reads using {fd}, {buffer}, {num_bytes} from the stack above volatiles.
-// Preserves all volatile registers; result returned in X0.
-// @return X0 — number of bytes read on success, negative errno on failure
-.MACRO __READ
-
-	_PUSH_VOLATILES
-
-	LDP X0,X1,[SP,VOLATILE_LENGTH]
-	LDR X2,[SP,VOLATILE_LENGTH+16]
-
-	BL READ
-
-	MOV X20,X0
-
-	_POP_VOLATILES
-
-	MOV X0,X20
-
-.ENDM
-
-// ssize_t _READ(fd, buffer, num_bytes)
-// Reads up to {num_bytes} bytes from file descriptor {fd} into {buffer}.
-// Returns the number of bytes read in X0 on success, negative errno on failure.
+// ssize_t _read(int fd, void* buf, size_t count)
+// Reads up to {count} bytes from the file descriptor {fd} into {buf}.
 // @param fd X0 — file descriptor to read from
-// @param buffer X1 — pointer to destination buffer
-// @param num_bytes X2 — maximum number of bytes to read
-// @return X0 — number of bytes read on success, negative errno on failure
-.MACRO _READ FD BUFFER NUM_BYTES
+// @param buf X1 — pointer to buffer where data will be stored
+// @param count X2 — max number of bytes to read
+// @return X0 — number of bytes read on success (0 = EOF), negative errno on failure
+.MACRO _read
 
-	SUB SP,SP,32
-	MOV X20,\FD
-	STR X20,[SP,0]
-	MOV X20,\BUFFER
-	STR X20,[SP,8]
-	MOV X20,\NUM_BYTES
-	STR X20,[SP,16]
-
-	__READ
-
-	ADD SP,SP,32
+	mov x8, #63
+	SVC #0
 
 .ENDM
-
-.IFDEF VERBOSE_LOGS
-
-.INCLUDE "IO/LOG_TEXT.S"
-.INCLUDE "IO/LOG_DECIMAL.S"
-
-1:	.ASCII "ATTEMPTING TO READ "
-2:	.ASCII "BYTES FROM FD="
-3:	.ASCII ": '"
-4:	.ASCII "' ("
-5:	.ASCII " BYTES READ)\n"
-
-.ENDIF
-
-///////////////////////////////////////////////////////////////////////////////
-
-.ALIGN 2
-
-READ:	// {W0} READ({W0}, {X1}, {W2});
-	// RETURNS NUMBER BYTES READ
-	
-.IFDEF VERBOSE_LOGS
-	SUB SP,SP,48
-	STP X0,X1,[SP,16]
-	STP X2,X3,[SP,0]
-	STR LR,[SP,32]
-	_LOG_TEXT 1b 19
-	LDP X2,X3,[SP,0]
-	_LOG_DECIMAL X2	
-	_LOG_TEXT (2b-1),15
-	LDP X0,X1,[SP,16]
-	_LOG_DECIMAL X0	
-	LDP X0,X1,[SP,16]
-	_LOG_TEXT 3b,3
-	LDP X0,X1,[SP,16]
-	LDP X2,X3,[SP,0]
-	LDR LR,[SP,32]
-	ADD SP,SP,32
-	STR X1,[SP,0]
-
-.ENDIF
-
-	ADD X1, X1, LOAD_ADDRESS // position independent LDR basically
-	MOV W8, SYS_READ 
-	SVC 0
-
-.IFDEF VERBOSE_LOGS
-	
-	LDR X1,[SP,0]
-	SUB SP,SP,32
-	STP X0,X1,[SP,16]
-	STP X2,X3,[SP,0]
-	STR LR,[SP,32]
-	_LOG_TEXT X1,W0
-	_LOG_TEXT 4b,3
-	LDP X0,X1,[SP,16]
-	_LOG_DECIMAL X0
-	_LOG_TEXT 5b,13
-	LDP X0,X1,[SP,16]
-	LDP X2,X3,[SP,0]
-	LDR LR,[SP,32]
-	ADD SP,SP,48
-.ENDIF
-
-	RET
 
 .ENDIF
