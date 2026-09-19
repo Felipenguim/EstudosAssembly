@@ -51,165 +51,178 @@ END_HEADER:
 
 
 .INCLUDE "SYS/exit.s"
-.INCLUDE "SYS/socket.s"
-.INCLUDE "SYS/connect.s"
 .INCLUDE "SYS/close.s"
-.INCLUDE "SYS/WRITE.s"
-.INCLUDE "SYS/sleep.s"
-.INCLUDE "SYS/READ.s"
 
 .INCLUDE "IO/print_chars.s"
-.INCLUDE "IO/print_float.s"
-.INCLUDE "IO/print_memory.s"
+.INCLUDE "IO/print_int_d.s"
 .INCLUDE "IO/print_buffer_flush.s"
-.INCLUDE "IO/print_int_arrays.s"
-.INCLUDE "IO/print_int_h.s"
+
+.INCLUDE "net/tcp_connect.s"
+.INCLUDE "net/tcp_send_all.s"
+.INCLUDE "net/tcp_recv_all.s"
+.INCLUDE "net/http_post_build.s"
+.INCLUDE "net/http_status_code.s"
 
 //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;INSTRUCTIONS;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+.equ SERVER_PORT, 8000
+.equ SERVER_IP, 0x7F000001 // 127.0.0.1
+.equ RESP_BUFFER_SIZE, 1024
+
 START:
 
-	//criando um socket 
-	//argumentos para TCP/IPv4 de saída
-	mov x0, #2 //AF_INET
-	//AF_INET significa Address Family: Internet (mais especificamente, IPv4)
-	mov x1, #1 //SOCK_STREAM
-	//fluxo contínuo e confiável de bytes, orientado a conexão, com garantia de entrega e de ordem.
-	mov x2, #0 //protocol escolhido pelo kernel 
-	_socket //retorna x0 com um fd se der certo x0<0 se erro
-	cmp x0, #0
-	b.lt .socket_err
-
-	mov x19, x0 //guardando o fd
-
-	//montando a struct sockaddr_in
-	mov x2, #2 //AF_INET
-	mov x3, #8000//port
-	rev16 w3, w3 ////struct pede big endian
-	MOVZ w4, #0x0001          // Limpa o registrador e coloca 0x0001 nos 16 bits mais baixos
-	MOVK w4, #0x7F00, LSL #16//ip
-	rev w4, w4 //struct pede big endian
-
-	adr x1, sockaddr_in
-	strh w2, [x1]
-	strh w3, [x1, #2]
-	str w4, [x1, #4]
-	//não precisa fazer o store dos últimos 8 bytes, eles já vem zero
-
-	//x0 já com o fd da syscall socket
-	//x1 já com o adr de sockaddr_in
-	mov x2, #16 //len de sockaddr_in
-	_connect //x0 == 0 se correto
+	//abrindo a conexão TCP com o servidor
+	mov x0, #SERVER_PORT
+	movz w1, #(SERVER_IP & 0xFFFF)
+	movk w1, #(SERVER_IP >> 16), lsl #16
+	bl tcp_connect //retorna x0 com o fd do socket, x0<0 se erro
 	cmp x0, #0
 	b.lt .connect_err
-	
-	mov x0, x19
-	adr x1, http_string
-	mov x2, HTTP_LEN
-	_write
+	mov x19, x0 //guardando o fd
 
+	//montando a request HTTP no buffer
+	adr x0, req_buffer
+	movz w1, #(SERVER_IP & 0xFFFF)
+	movk w1, #(SERVER_IP >> 16), lsl #16
+	mov x2, #SERVER_PORT
+	adr x3, path
+	adr x4, body
+	mov x5, #BODY_LEN
+	bl http_post_build //retorna x0 com o tamanho da request
+	mov x20, x0
 
-	// adr x0, sleep_time
-	// mov x1, #0
-	// _sleep
-	//FAZER UM LOOP ATÉ READ RETORNAR 0 EM x0 
-	mov x0, x19
-	adr x1, resp_header_buffer
-	mov x2, #512
-	_read
+	//enviando a request
+	mov x0, x19 //fd 
+	adr x1, req_buffer //que foi montado
+	mov x2, x20 //len req buffer
+	bl tcp_send_all
+	cmp x0, #0
+	b.lt .send_err
 
-	mov x0, #1
-	adr x1, resp_header_buffer
-	mov x2, #512
-	bl print_chars
-
+	//recebendo a resposta até o servidor fechar a conexão
 	mov x0, x19
 	adr x1, resp_buffer
-	mov x2, #512
-	_read
-
-	mov x0, #1
-	adr x1, resp_buffer
-	mov x2, #512
-	bl print_chars
+	mov x2, #RESP_BUFFER_SIZE
+	bl tcp_recv_all
+	cmp x0, #0
+	b.lt .recv_err
+	mov x21, x0 //tamanho da resposta
 
 	mov x0, x19
 	_close
-	
-	// mov x0, #1
-	// adr x1, sockaddr_in
-	// adr x2, print_int_h
-	// mov x3, 2*8 //16 bytes
-	// bl print_memory
-	// mov x1, x0
-	// mov x0, #1
-	// bl print_int_d
 
+	//mostrando a resposta crua
+	mov x0, #1
+	adr x1, resp_buffer
+	mov x2, x21
+	bl print_chars
+
+	//extraindo o status code e decidindo o que fazer
+	adr x0, resp_buffer
+	bl http_status_code
+	mov x22, x0
+
+	mov x0, #1
+	adr x1, status_string
+	mov x2, #STATUS_STRING_LEN
+	bl print_chars
+	mov x1, x22
+	bl print_int_d
+	mov x0, #1
+	adr x1, newline
+	mov x2, #1
+	bl print_chars
+
+	cmp x22, #200
+	b.ne .status_not_ok
+
+	mov x0, #1
+	adr x1, ok_string
+	mov x2, #OK_STRING_LEN
+	bl print_chars
+	b .end
+
+.status_not_ok:
+	mov x0, #1
+	adr x1, not_ok_string
+	mov x2, #NOT_OK_STRING_LEN
+	bl print_chars
+
+.end:
 	bl print_buffer_flush
 	mov x0, #0 // exit code 0
 	_exit
 
-.socket_err:
-	//fazer prints diferenciados depois 
-	_exit
 .connect_err:
-	mov x0, #1 
-	adr x1, err_connect_string 
-	mov x2, #18
+	mov x0, #1
+	adr x1, err_connect_string
+	mov x2, #ERR_CONNECT_STRING_LEN
+	bl print_chars
+	b .err_exit
+
+.send_err:
+	mov x0, #1
+	adr x1, err_send_string
+	mov x2, #ERR_SEND_STRING_LEN
+	bl print_chars
+	b .err_exit
+
+.recv_err:
+	mov x0, #1
+	adr x1, err_recv_string
+	mov x2, #ERR_RECV_STRING_LEN
 	bl print_chars
 
+.err_exit:
 	bl print_buffer_flush
+	mov x0, #1 // exit code 1
 	_exit
 
-sockaddr_in:
-	.zero 16
 
-// array:
-// 	.rept LEN_ARR
-// 	.quad 0
-// 	.endr
 
-sleep_time:
-	.quad 3 // tv_sec
-	.quad 0// tv_nsec 
+path:
+	.asciz "/"
 
-resp_header_buffer:
-	.zero 512
-resp_buffer:
-	.zero 512
-
-err_connect_string:
-	.asciz "Error in connect \n"
-
-http_string:
-	.ascii "POST / HTTP/1.1\r\n"
-	.ascii "Host: 127.0.0.1:8000\r\n"
-	.ascii "Content-Type: text/plain\r\n"
-	.ascii "Content-Length: 4\r\n"
-	.ascii "\r\n"
 body:
 	.ascii "pang"
+.equ BODY_LEN, . - body
 
-END_http_string:
+status_string:
+	.ascii "Status code: "
+.equ STATUS_STRING_LEN, . - status_string
 
-.equ HTTP_LEN, END - http_string
+ok_string:
+	.ascii "Servidor respondeu OK (200)\n"
+.equ OK_STRING_LEN, . - ok_string
+
+not_ok_string:
+	.ascii "Servidor recusou a requisicao\n"
+.equ NOT_OK_STRING_LEN, . - not_ok_string
+
+newline:
+	.ascii "\n"
+
+err_connect_string:
+	.ascii "Error in connect\n"
+.equ ERR_CONNECT_STRING_LEN, . - err_connect_string
+
+err_send_string:
+	.ascii "Error in send\n"
+.equ ERR_SEND_STRING_LEN, . - err_send_string
+
+err_recv_string:
+	.ascii "Error in recv\n"
+.equ ERR_RECV_STRING_LEN, . - err_recv_string
+
+.balign 8
+req_buffer:
+	.zero 512
+resp_buffer:
+	.zero RESP_BUFFER_SIZE
 
 END:
 
 
 PRINT_BUFFER:
-
-
-//STRUCT sockaddr_in
-// struct sockaddr_in {
-//     sa_family_t    sin_family;   // 2 bytes //no caso AF_INET
-//     in_port_t      sin_port;     // 2 bytes //porta de destino (BIG ENDIAN)
-//     struct in_addr sin_addr;     // 4 bytes //ip de destino 
-//     unsigned char  sin_zero[8];  // 8 bytes
-// };
-
-// struct in_addr {
-//     uint32_t s_addr;             // 4 bytes — o IP em si
-// };
