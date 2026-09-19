@@ -5,7 +5,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// void rand_int_array(long* {x0}, int {x1}, unsigned int {x2}, signed long {x3}, signed long {x4})
+// int* rand_int_array(long* {x0}, int {x1}, unsigned int {x2}, signed long {x3}, signed long {x4})
 // Places {x2} random integers into an array starting at {x0}, with
 // ({x1}+8) bytes between consecutive elements. Each value satisfies
 // {x3}<=value<={x4}.

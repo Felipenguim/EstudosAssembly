@@ -34,7 +34,7 @@ rand_float:
 
 	scvtf d2, x9   // convert the positive int64 to a double
 	ldr d3, .tiny    // d3 = 2^-63 (PC-relative literal load)
-	fmul d2, d2, d3                   // d2 = int-as-double * 2^-63 → fraction in [0,1)
+	fmul d2, d2, d3  // d2 = int-as-double * 2^-63 → fraction in [0,1)
 
 	fsub d1, d1, d0    // d1 = upper - lower (range)
 	fmul d1, d1, d2       // d1 = range * fraction
