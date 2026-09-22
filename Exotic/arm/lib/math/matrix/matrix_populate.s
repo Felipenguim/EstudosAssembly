@@ -20,10 +20,10 @@ matirx_populate:
     
 	lsl x3, x3, #3 //*8, numero de bytes]
 
-	.loop_rows:
+	.loop_rows_populate:
 		mov x6, #0 //offset para a coluna na matriz
 
-	.loop_cols: //elemento a elemento
+	.loop_cols_populate: //elemento a elemento
 		mov x19, x1
 		add x19, x19, x6 //pega o elemento com o offset
 		mov x7, x19 //x7 com addr de x1
@@ -35,11 +35,11 @@ matirx_populate:
 
 		cmp x6, x3
 
-		b.lo .loop_cols
+		b.lo .loop_cols_populate
 
 		add x1, x1, x4 //nex row of source 
 		sub x2, x2, #1
-		cbnz x2, .loop_rows
+		cbnz x2, .loop_rows_populate
 
 	ldp x19, x20, [sp], #16
 	ldp x6, x7, [sp], #16

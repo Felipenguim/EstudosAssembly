@@ -54,9 +54,12 @@ END_HEADER:
 
 .INCLUDE "IO/print_chars.s"
 
-.INCLUDE "IO/print_a.s"
+.INCLUDE "IO/print_float_array.s"
 
 .INCLUDE "IO/mem_copy.s"
+.INCLUDE "math/matrix/matrix_populate.s"
+.INCLUDE "math/matrix/matrix_set_all_values.s"
+.INCLUDE "math/matrix/matrix_set_identity.s"
 
 
 //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -65,33 +68,78 @@ END_HEADER:
 
 START:
 
-	// generate array of random floats
-	movi d0, #0        // lower bound = 0.0
-	mov x1, #100
-	scvtf d1, x1       // upper bound = 100.0
-	adr x0, array
-	mov x1, #0         // no padding between elements
-	mov x2, LEN_ARR
+	mov x0, #1
+	adr x1, .grammar0
+	mov x2,.grammar1-.grammar0
+	bl print_chars
 
-	bl mem_copy
+	//matrix print
+	mov x0, #1
+	adr x1, MATRIX
+	mov x2, #4
+	mov x3, #4
+	mov x4, #0
+	adr x5, print_float
+	mov x6, #4
+	bl print_array_float
 
-	// print the array, one value per line
-	mov x19, x0        // x19 walks the array (rand_float_array returns the pointer in x0)
-	mov x20, LEN_ARR   // x20 = how many elements are left
-
-.loop_print:
-	ldr d0, [x19], #8  // d0 = current element, then advance to the next one
-	mov x0, #1         // stdout
-	mov x1, #8         // sig digits
-	bl print_float
+	adr x0, MATRIX
+	mov x2, #4
+	mov x1, #4
+	bl matrix_set_identity
 
 	mov x0, #1
-	adr x1, NEWLINE
-	mov x2, #1
-    bl print_chars
+	adr x1, .grammar1
+	mov x2,.grammar2-.grammar1
+	bl print_chars
 
-	subs x20, x20, #1
-	b.ne .loop_print
+	mov x0, #1
+	adr x1, MATRIX
+	mov x2, #4
+	mov x3, #4
+	mov x4, #0
+	adr x5, print_float
+	mov x6, #4
+	bl print_array_float
+
+	adr x0, MATRIX
+	mov x1, #16
+	adr x2, .GOAT
+	ldr d0, [x2] 
+	bl matrix_set_all_values
+
+	mov x0, #1
+	adr x1, .grammar2
+	mov x2,.grammar3-.grammar2
+	bl print_chars
+
+	mov x0, #1
+	adr x1, MATRIX
+	mov x2, #4
+	mov x3, #4
+	mov x4, #0
+	adr x5, print_float
+	mov x6, #4
+	bl print_array_float
+
+	adr x0, MATRIX
+	adr x1, ANOTHER_MATRIX
+	mov x2, 16*8
+	bl mem_copy
+
+	mov x0, #1
+	adr x1, .grammar3
+	mov x2,.grammar4-.grammar3
+	bl print_chars
+
+	mov x0, #1
+	adr x1, MATRIX
+	mov x2, #4
+	mov x3, #4
+	mov x4, #0
+	adr x5, print_float
+	mov x6, #4
+	bl print_array_float
 
 	bl print_buffer_flush
 	mov x0, #0 // exit code 0
@@ -100,11 +148,30 @@ START:
 NEWLINE:
 	.byte 0x0A
 
-array:
-	.rept LEN_ARR
-	.quad 0
+MATRIX:
+	.rept 16
+	.double 420.0
 	.endr
 
+ANOTHER_MATRIX:
+	.double 1.5, 1.5, 1.5, 1.5 
+	.double 1.4, 1.4, 1.4, 1.4
+	.double 1.1, 1.1, 1.1, 1.1
+	.double 4.4, 4.4, 4.4, 4.4
+
+.grammar0:
+	.ascii "\nInitial Matrix=\n"
+.grammar1:
+	.ascii "\nIdentity Matrix=\n"
+.grammar2:
+	.ascii "\n67 Matrix=\n"
+.grammar3:
+	.ascii "\nCopied Matrix=\n"
+.grammar4:
+	.ascii "\nPopulated Matrix=\n"
+
+.GOAT:
+	.double 6.7
 
 END:
 
