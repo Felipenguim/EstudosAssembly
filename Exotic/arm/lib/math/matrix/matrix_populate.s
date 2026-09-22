@@ -1,8 +1,5 @@
 .IFNDEF MATRIX_POPULATE
 .EQU MATRIX_POPULATE, 1
-
-.INCLUDE "SYS/getrandom.s"
-
 ///////////////////////////////////////////////////////////////////////////////
 
 // void matrix_populate(double* {x0}, double* {x1}, uint {x2}, uint {x3}, uint {x4}, uint {x5})
