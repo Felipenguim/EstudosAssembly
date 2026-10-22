@@ -1,5 +1,15 @@
- 1904  rm *.o test
- 1905  as -o teste.o teste.s
- 1906  as -o utils.o utils.s
- 1907  ld -o test teste.o utils.o
- 1908  ./test
+1904  rm *.o test
+1905  as -o teste.o teste.s
+1906  as -o utils.o utils.s
+1907  ld -o test teste.o utils.o
+1908  ./test
+set -e
+
+aarch64-linux-gnu-as -o mmap_print_arm64.o mmap_print_arm64.s
+aarch64-linux-gnu-as -o utils.o utils.s
+
+aarch64-linux-gnu-ld \
+  -o mmap_print_arm64 \
+  mmap_print_arm64.o utils.o
+
+echo "Build OK"

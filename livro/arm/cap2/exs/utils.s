@@ -24,6 +24,7 @@ signal:
 .global string_copy
 .global exit
 .global success_exit
+.global print_newline_tail
 
 exit:
 // deve receber o x0 com algum código de saída
@@ -94,6 +95,9 @@ print_newline:
     mov x0, #0
     ret
 
+print_newline_tail:
+    adr x0, newline
+    b print_string
 
 
 
@@ -164,6 +168,34 @@ print_int:
         mov x0, #0
         ldp x29, x30, [sp], 16
         ret
+
+
+
+print_int_tail_call:
+    sub sp, sp, #32
+    add x3, sp, #32 // aponta para o fim do buffer
+    mov w1, #0 //para terminar com nulo 
+    strb w1, [x3, #-1]!
+    mov x15, x0
+    //usar o x15 para ver se é positivo ou negativo 
+    lsr x12, x0, 63 //poderia usar o tst x0, x0 que já pegaria esse bit de sinal
+    cbz x12, .positive //compare e branch se x12 == 0
+    mov x0, 1
+    adr x1, signal
+    mov x2, 1
+    mov x8, #64
+    svc #0
+    mov x0, #0
+    neg x15, x15 // só faz se for negativo
+    
+    .positive:
+        mov x0, x15
+        bl int_to_string
+        mov x0, x3
+        add sp, sp, #32
+        b print_string
+        
+
 
     
 // devo abrir o espaço na pilha e colocar um ponteiro em x1
